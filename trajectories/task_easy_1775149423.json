@@ -1,0 +1,62 @@
+[
+  {
+    "turn": 1,
+    "inbox_state": [
+      {
+        "id": "2",
+        "sender": "Shoes",
+        "subject": "Sneaker sale",
+        "snippet": "",
+        "is_read": false,
+        "is_flagged": false,
+        "folder": "Inbox",
+        "is_urgent": false
+      },
+      {
+        "id": "3",
+        "sender": "Boss",
+        "subject": "Meeting at 5",
+        "snippet": "",
+        "is_read": false,
+        "is_flagged": false,
+        "folder": "Inbox",
+        "is_urgent": true
+      }
+    ],
+    "agent_thinking": "Identifying promotional emails to archive",
+    "action": {
+      "action_type": "archive",
+      "email_id": "1",
+      "folder_name": null
+    },
+    "reward": 0.5,
+    "goal_progress": 0.5,
+    "status": "Action: archive",
+    "done": false
+  },
+  {
+    "turn": 2,
+    "inbox_state": [
+      {
+        "id": "3",
+        "sender": "Boss",
+        "subject": "Meeting at 5",
+        "snippet": "",
+        "is_read": false,
+        "is_flagged": false,
+        "folder": "Inbox",
+        "is_urgent": true
+      }
+    ],
+    "agent_thinking": "The task is to archive promotional emails to declutter the inbox.",
+    "action": {
+      "action_type": "archive",
+      "email_id": "2",
+      "folder_name": null
+    },
+    "reward": 0.5,
+    "goal_progress": 1.0,
+    "status": "Action: archive",
+    "done": true
+  }
+]

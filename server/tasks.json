@@ -1,0 +1,44 @@
+{
+  "easy": {
+    "description": "Archive the 2 promotional emails (Pizza and Shoes) to declutter the inbox.",
+    "emails": [
+      {"id": "1", "sender": "Pizza", "subject": "BOGO Deal!", "is_urgent": false},
+      {"id": "2", "sender": "Shoes", "subject": "Sneaker sale", "is_urgent": false},
+      {"id": "3", "sender": "Boss", "subject": "Meeting at 5", "is_urgent": true}
+    ],
+    "ground_truth": {
+      "archived_ids": ["1", "2"],
+      "flagged_ids": [],
+      "work_folder_ids": []
+    }
+  },
+  "medium": {
+    "description": "Flag the 2 urgent alerts (Security and HR) while archiving the 2 newsletters.",
+    "emails": [
+      {"id": "1", "sender": "Security", "subject": "LOGIN ALERT!", "is_urgent": true},
+      {"id": "2", "sender": "Newsletter", "subject": "Monday Tips", "is_urgent": false},
+      {"id": "3", "sender": "Sales", "subject": "Q4 Report Out", "is_urgent": false},
+      {"id": "4", "sender": "HR", "subject": "Vacation Policy", "is_urgent": true}
+    ],
+    "ground_truth": {
+      "archived_ids": ["2", "3"],
+      "flagged_ids": ["1", "4"],
+      "work_folder_ids": []
+    }
+  },
+  "hard": {
+    "description": "Flag 2 high-priority alerts AND move 2 project-related emails to the 'Work' folder.",
+    "emails": [
+      {"id": "1", "sender": "IT", "subject": "SYSTEM DOWN", "is_urgent": true},
+      {"id": "2", "sender": "Client", "subject": "Project Budget Fix", "is_urgent": true},
+      {"id": "3", "sender": "PM", "subject": "Task: Update Docs", "is_urgent": false, "snippet": "move to work"},
+      {"id": "4", "sender": "Eng", "subject": "Bug: Fix Login", "is_urgent": false, "snippet": "move to work"},
+      {"id": "5", "sender": "Spam", "subject": "Click me!", "is_urgent": false}
+    ],
+    "ground_truth": {
+      "archived_ids": [],
+      "flagged_ids": ["1", "2"],
+      "work_folder_ids": ["3", "4"]
+    }
+  }
+}

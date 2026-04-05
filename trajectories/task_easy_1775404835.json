@@ -1,0 +1,26 @@
+[
+  {
+    "turn": 1,
+    "agent_thinking": "Identifying promotional emails to archive",
+    "action": {
+      "action_type": "archive",
+      "email_id": "1",
+      "folder_name": null
+    },
+    "reward": 0.49,
+    "goal_progress": 0.5,
+    "done": false
+  },
+  {
+    "turn": 2,
+    "agent_thinking": "The task requires archiving promotional emails to declutter the inbox.",
+    "action": {
+      "action_type": "archive",
+      "email_id": "2",
+      "folder_name": null
+    },
+    "reward": 0.49,
+    "goal_progress": 1.0,
+    "done": true
+  }
+]

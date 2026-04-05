@@ -1,0 +1,182 @@
+[
+  {
+    "turn": 1,
+    "agent_thinking": "Brain Error: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}",
+    "action": {
+      "action_type": "none",
+      "email_id": "none",
+      "folder_name": null
+    },
+    "reward": -0.01,
+    "goal_progress": 0.0,
+    "done": false
+  },
+  {
+    "turn": 2,
+    "agent_thinking": "Brain Error: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}",
+    "action": {
+      "action_type": "none",
+      "email_id": "none",
+      "folder_name": null
+    },
+    "reward": -0.01,
+    "goal_progress": 0.0,
+    "done": false
+  },
+  {
+    "turn": 3,
+    "agent_thinking": "Brain Error: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}",
+    "action": {
+      "action_type": "none",
+      "email_id": "none",
+      "folder_name": null
+    },
+    "reward": -0.01,
+    "goal_progress": 0.0,
+    "done": false
+  },
+  {
+    "turn": 4,
+    "agent_thinking": "Brain Error: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}",
+    "action": {
+      "action_type": "none",
+      "email_id": "none",
+      "folder_name": null
+    },
+    "reward": -0.01,
+    "goal_progress": 0.0,
+    "done": false
+  },
+  {
+    "turn": 5,
+    "agent_thinking": "Brain Error: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}",
+    "action": {
+      "action_type": "none",
+      "email_id": "none",
+      "folder_name": null
+    },
+    "reward": -0.01,
+    "goal_progress": 0.0,
+    "done": false
+  },
+  {
+    "turn": 6,
+    "agent_thinking": "Brain Error: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}",
+    "action": {
+      "action_type": "none",
+      "email_id": "none",
+      "folder_name": null
+    },
+    "reward": -0.01,
+    "goal_progress": 0.0,
+    "done": false
+  },
+  {
+    "turn": 7,
+    "agent_thinking": "Brain Error: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}",
+    "action": {
+      "action_type": "none",
+      "email_id": "none",
+      "folder_name": null
+    },
+    "reward": -0.01,
+    "goal_progress": 0.0,
+    "done": false
+  },
+  {
+    "turn": 8,
+    "agent_thinking": "Brain Error: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}",
+    "action": {
+      "action_type": "none",
+      "email_id": "none",
+      "folder_name": null
+    },
+    "reward": -0.01,
+    "goal_progress": 0.0,
+    "done": false
+  },
+  {
+    "turn": 9,
+    "agent_thinking": "Brain Error: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}",
+    "action": {
+      "action_type": "none",
+      "email_id": "none",
+      "folder_name": null
+    },
+    "reward": -0.01,
+    "goal_progress": 0.0,
+    "done": false
+  },
+  {
+    "turn": 10,
+    "agent_thinking": "Brain Error: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}",
+    "action": {
+      "action_type": "none",
+      "email_id": "none",
+      "folder_name": null
+    },
+    "reward": -0.01,
+    "goal_progress": 0.0,
+    "done": false
+  },
+  {
+    "turn": 11,
+    "agent_thinking": "Brain Error: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}",
+    "action": {
+      "action_type": "none",
+      "email_id": "none",
+      "folder_name": null
+    },
+    "reward": -0.01,
+    "goal_progress": 0.0,
+    "done": false
+  },
+  {
+    "turn": 12,
+    "agent_thinking": "Brain Error: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}",
+    "action": {
+      "action_type": "none",
+      "email_id": "none",
+      "folder_name": null
+    },
+    "reward": -0.01,
+    "goal_progress": 0.0,
+    "done": false
+  },
+  {
+    "turn": 13,
+    "agent_thinking": "Brain Error: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}",
+    "action": {
+      "action_type": "none",
+      "email_id": "none",
+      "folder_name": null
+    },
+    "reward": -0.01,
+    "goal_progress": 0.0,
+    "done": false
+  },
+  {
+    "turn": 14,
+    "agent_thinking": "Brain Error: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}",
+    "action": {
+      "action_type": "none",
+      "email_id": "none",
+      "folder_name": null
+    },
+    "reward": -0.01,
+    "goal_progress": 0.0,
+    "done": false
+  },
+  {
+    "turn": 15,
+    "agent_thinking": "Brain Error: Error code: 401 - {'error': {'message': 'Invalid API Key', 'type': 'invalid_request_error', 'code': 'invalid_api_key'}}",
+    "action": {
+      "action_type": "none",
+      "email_id": "none",
+      "folder_name": null
+    },
+    "reward": -0.01,
+    "goal_progress": 0.0,
+    "done": true
+  }
+]

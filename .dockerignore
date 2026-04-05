@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv/
+venv/
+.git/
+.gitignore
+trajectories/
+validation_log.txt
+test_groq.py
+implementation_plan.md
+task.md
