@@ -11,11 +11,14 @@ load_dotenv()
 # Configuration (Required environment variables)
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api.groq.com/openai/v1")
 
-# Smart API Key Selection: Prioritize the key that matches the URL
+# Smart API Key Selection: Prioritize the key specified in Hackathon Rules (HF_TOKEN)
+HF_TOKEN = os.getenv("HF_TOKEN")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
 if "groq" in API_BASE_URL.lower():
-    API_KEY = os.getenv("GROQ_API_KEY") or os.getenv("HF_TOKEN")
+    API_KEY = GROQ_API_KEY or HF_TOKEN
 else:
-    API_KEY = os.getenv("HF_TOKEN") or os.getenv("GROQ_API_KEY")
+    API_KEY = HF_TOKEN or GROQ_API_KEY
 
 MODEL_NAME = os.getenv("MODEL_NAME", "llama-3.1-8b-instant")
 
@@ -171,7 +174,7 @@ def run_pro_agent(task_id="hard"):
 
     # 6. Save Trajectory (Optional but Pro)
     timestamp = int(time.time())
-    traj_dir = "smart_inbox_lite/trajectories"
+    traj_dir = "trajectories"
     os.makedirs(traj_dir, exist_ok=True)
     file_path = f"{traj_dir}/task_{task_id}_{timestamp}.json"
     with open(file_path, "w") as f:
@@ -182,10 +185,29 @@ def run_pro_agent(task_id="hard"):
     print(f"FINAL COMPLETION SCORE: {obs.goal_progress * 100:.1f}%")
     print(f"TURNS TAKEN: {total_turns}")
     print("🏁" * 30)
+    
+    return obs.goal_progress
 
 def main():
-    # Choose your task: 'easy', 'medium', or 'hard'
-    run_pro_agent("hard")
+    # Performance benchmark across all task tiers
+    tasks = ["easy", "medium", "hard"]
+    results = {}
+    
+    print("\n" + "📊" * 30)
+    print("      STARTING OPENENV FULL BENCHMARK      ")
+    print("📊" * 30 + "\n")
+    
+    for t_id in tasks:
+        score = run_pro_agent(t_id)
+        results[t_id] = score
+        
+    print("\n" + "=" * 40)
+    print("      FINAL SCORECARD SUMMARY      ")
+    print("=" * 40)
+    for t_id, score in results.items():
+        status = "✅ PASS" if score >= 1.0 else "❌ PARTIAL"
+        print(f"TASK: {t_id.upper():<10} | SCORE: {score:.1f} | STATUS: {status}")
+    print("=" * 40)
 
 if __name__ == "__main__":
     main()
