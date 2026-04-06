@@ -4,6 +4,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from typing import Dict, Any, Optional
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
 from environment import SmartInboxEnv
@@ -20,6 +21,11 @@ app = FastAPI(
 
 class ResetRequest(BaseModel):
     task_id: str = "easy"
+
+@app.get("/", include_in_schema=False)
+async def root():
+    """Redirect web visitors directly to the Swagger UI."""
+    return RedirectResponse(url="/docs")
 
 @app.post("/reset", response_model=EmailObservation)
 async def reset(req: Optional[ResetRequest] = None):
