@@ -1,35 +1,27 @@
-import os
-import json
-import time
-from dotenv import load_dotenv
-from openai import OpenAI
-import httpx
-
-# Load API keys from .env
-load_dotenv()
-
-# Configuration (Required environment variables)
-API_BASE_URL = os.getenv("API_BASE_URL", "https://api.groq.com/openai/v1")
-
-# Smart API Key Selection: Prioritize the key specified in Hackathon Rules (HF_TOKEN)
-HF_TOKEN = os.getenv("HF_TOKEN")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-
-if "groq" in API_BASE_URL.lower():
-    API_KEY = GROQ_API_KEY or HF_TOKEN
-else:
-    API_KEY = HF_TOKEN or GROQ_API_KEY
-
-MODEL_NAME = os.getenv("MODEL_NAME", "llama-3.1-8b-instant")
-
-import sys
-# Ensure absolute paths to the project root and server directory are added
-project_root = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(project_root)
-sys.path.append(os.path.join(project_root, "server"))
-
 from server.environment import SmartInboxEnv
 from models import EmailAction
+
+# MANDATORY STDOUT LOGGING
+def log_start(task: str, env: str, model: str) -> None:
+    print(f"[START] task={task} env={env} model={model}", flush=True)
+
+def log_step(step: int, action: str, reward: float, done: bool, error: str = "null") -> None:
+    done_val = str(done).lower()
+    print(f"[STEP] step={step} action={action} reward={reward:.2f} done={done_val} error={error}", flush=True)
+
+def log_end(success: bool, steps: int, score: float, rewards: list[float]) -> None:
+    rewards_str = ",".join(f"{r:.2f}" for r in rewards)
+    print(f"[END] success={str(success).lower()} steps={steps} score={score:.3f} rewards={rewards_str}", flush=True)
+
+# --------------------------------------------------------------------------
+# CONFIGURATION (Strict Compliance)
+# --------------------------------------------------------------------------
+API_BASE_URL = os.getenv("API_BASE_URL", "https://api.groq.com/openai/v1")
+MODEL_NAME = os.getenv("MODEL_NAME", "llama-3.1-8b-instant")
+HF_TOKEN = os.getenv("HF_TOKEN") or os.getenv("GROQ_API_KEY") # Prioritize HF_TOKEN
+BENCHMARK_NAME = os.getenv("SMART_INBOX_BENCHMARK", "smart_inbox_lite")
+TASK_NAME = os.getenv("SMART_INBOX_TASK", "easy")
+# --------------------------------------------------------------------------
 
 def format_inbox(emails):
     """Converts the list of Email objects into a readable string for the LLM."""
@@ -75,7 +67,8 @@ def get_llm_action(client, obs, task_description, history=""):
     """
     
     try:
-        print(f"📡 Calling AI Brain ({MODEL_NAME})...")
+        # [DEBUG] logs help the user but are ignored by the grader
+        # print(f"[DEBUG] Calling AI Brain ({MODEL_NAME})...")
         response = client.chat.completions.create(
             model=MODEL_NAME,
             messages=[{"role": "user", "content": prompt}],
@@ -83,7 +76,6 @@ def get_llm_action(client, obs, task_description, history=""):
             response_format={ "type": "json_object" },
             timeout=30.0 # Standard safety timeout
         )
-        print("✅ Brain Responded.")
         
         content = response.choices[0].message.content
         data = json.loads(content)
@@ -101,113 +93,61 @@ def get_llm_action(client, obs, task_description, history=""):
     except Exception as e:
         return f"Brain Error: {str(e)}", "none", "none", None
 
-def run_pro_agent(task_id="hard"):
+def run_pro_agent(task_id="easy"):
     # 1. Setup (Using mandatory OpenAI client)
-    if not API_KEY:
-        print("❌ ERROR: API Key (HF_TOKEN or GROQ_API_KEY) not found.")
-        return
+    if not HF_TOKEN:
+        print("❌ ERROR: HF_TOKEN not found in environment.")
+        return 0.0
 
-    # Fix for the networking hang: Create a custom client that doesn't trust system proxies
-    # and has specific connection limits.
     http_client = httpx.Client(trust_env=False)
-    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY, http_client=http_client)
+    client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN, http_client=http_client)
     
     env = SmartInboxEnv()
-    
-    # Get task description for the agent
+    obs = env.reset(task_id)
     task_desc = env.all_tasks.get(task_id, {}).get("description", "Clean the inbox")
     
-    # Reset now returns ONLY obs (Strict Spec)
-    obs = env.reset(task_id)
-    
-    print("=" * 60)
-    print(f"🚀 STARTING PRO TASK: {task_id.upper()}")
-    print(f"GOAL: {task_desc}")
-    print("=" * 60)
+    log_start(task=task_id, env=BENCHMARK_NAME, model=MODEL_NAME)
     
     total_turns = 0
-    trajectory = []
+    rewards = []
+    success = False
     
     # 2. Episode Loop
     history = []
-    while not obs.done:
-        if not obs.emails:
-            print("\n📭 Inbox is empty. Task likely complete.")
-            break
+    try:
+        while not obs.done:
+            if not obs.emails or total_turns > 15:
+                break
+                
+            total_turns += 1
             
-        total_turns += 1
-        print(f"\n[TURN {total_turns}]")
-        print(format_inbox(obs.emails))
-        
-        # 3. Brain Call with History
-        history_str = "\n".join(history[-3:]) # Keep last 3 turns
-        thinking, a_type, eid, folder = get_llm_action(client, obs, task_desc, history_str)
-        
-        print(f"🤔 THINKING: {thinking}")
-        print(f"👉 ACTION: {a_type} on ID {eid} (Folder: {folder})")
-        
-        # 4. Step execution (Returns exactly 4 values: obs, reward, done, info)
-        action = EmailAction(action_type=a_type, email_id=eid, folder_name=folder)
-        obs, reward, done, info = env.step(action)
-        
-        # Update history
-        result_desc = f"Success (+{reward})" if reward > 0 else f"Failed/Redundant ({reward})"
-        history.append(f"Turn {total_turns}: {a_type} on ID {eid} -> {result_desc}")
-
-        # 5. Log Trajectory
-        trajectory.append({
-            "turn": total_turns,
-            "agent_thinking": thinking,
-            "action": action.model_dump(),
-            "reward": reward,
-            "goal_progress": obs.goal_progress,
-            "done": done
-        })
-        
-        # RESULT
-        print(f"STATUS: {obs.last_action_status}")
-        # Note: reward = (Progress Gain) - (Temporal Pressure Penalty)
-        print(f"PROGRESS: {obs.goal_progress * 100:.1f}% | REWARD: {obs.reward:+.2f} (Includes Time Penalty)")
-        
-        time.sleep(1)
-        if total_turns > 15: break
-
-    # 6. Save Trajectory (Optional but Pro)
-    timestamp = int(time.time())
-    traj_dir = "trajectories"
-    os.makedirs(traj_dir, exist_ok=True)
-    file_path = f"{traj_dir}/task_{task_id}_{timestamp}.json"
-    with open(file_path, "w") as f:
-        json.dump(trajectory, f, indent=2)
-    print(f"\n✅ Trajectory saved to: {file_path}")
-
-    print("\n" + "🏁" * 30)
-    print(f"FINAL COMPLETION SCORE: {obs.goal_progress * 100:.1f}%")
-    print(f"TURNS TAKEN: {total_turns}")
-    print("🏁" * 30)
+            # 3. Brain Call
+            history_str = "\n".join(history[-3:]) 
+            thinking, a_type, eid, folder = get_llm_action(client, obs, task_desc, history_str)
+            
+            # 4. Step execution
+            action_desc = f"{a_type}({eid})" if folder is None else f"move({eid},{folder})"
+            action = EmailAction(action_type=a_type, email_id=eid, folder_name=folder)
+            obs, reward, done, info = env.step(action)
+            
+            # 5. MANDATORY LOGGING
+            log_step(step=total_turns, action=action_desc, reward=reward, done=done)
+            
+            # Keep history for agent memory
+            rewards.append(reward)
+            history.append(f"Turn {total_turns}: {a_type}({eid}) -> Reward {reward:+.2f}")
+            
+    finally:
+        # Final Score Calculation (Must be normalized score in [0, 1])
+        final_score = obs.goal_progress
+        success = final_score >= 1.0
+        log_end(success=success, steps=total_turns, score=final_score, rewards=rewards)
     
-    return obs.goal_progress
+    return final_score
 
 def main():
-    # Performance benchmark across all task tiers
-    tasks = ["easy", "medium", "hard"]
-    results = {}
-    
-    print("\n" + "📊" * 30)
-    print("      STARTING OPENENV FULL BENCHMARK      ")
-    print("📊" * 30 + "\n")
-    
-    for t_id in tasks:
-        score = run_pro_agent(t_id)
-        results[t_id] = score
-        
-    print("\n" + "=" * 40)
-    print("      FINAL SCORECARD SUMMARY      ")
-    print("=" * 40)
-    for t_id, score in results.items():
-        status = "✅ PASS" if score >= 1.0 else "❌ PARTIAL"
-        print(f"TASK: {t_id.upper():<10} | SCORE: {score:.1f} | STATUS: {status}")
-    print("=" * 40)
+    # Only run the mandatory task defined by environment variables (Standard for Autograder)
+    run_pro_agent(TASK_NAME)
 
 if __name__ == "__main__":
     main()
