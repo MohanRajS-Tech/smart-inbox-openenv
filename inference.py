@@ -1,3 +1,19 @@
+import os
+import json
+import time
+import httpx
+import sys
+from openai import OpenAI
+from dotenv import load_dotenv
+
+# Load API keys from .env
+load_dotenv()
+
+# Ensure absolute paths to the project root and server directory are added
+project_root = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(project_root)
+sys.path.append(os.path.join(project_root, "server"))
+
 from server.environment import SmartInboxEnv
 from models import EmailAction
 
@@ -18,7 +34,7 @@ def log_end(success: bool, steps: int, score: float, rewards: list[float]) -> No
 # --------------------------------------------------------------------------
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api.groq.com/openai/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "llama-3.1-8b-instant")
-HF_TOKEN = os.getenv("HF_TOKEN") or os.getenv("GROQ_API_KEY") # Prioritize HF_TOKEN
+HF_TOKEN = os.getenv("GROQ_API_KEY") if "groq" in API_BASE_URL.lower() else (os.getenv("HF_TOKEN") or os.getenv("GROQ_API_KEY"))
 BENCHMARK_NAME = os.getenv("SMART_INBOX_BENCHMARK", "smart_inbox_lite")
 TASK_NAME = os.getenv("SMART_INBOX_TASK", "easy")
 # --------------------------------------------------------------------------
