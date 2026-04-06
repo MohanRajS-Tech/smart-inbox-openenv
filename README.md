@@ -24,6 +24,9 @@ This environment simulates a real-world email inbox where an AI agent must prior
 - **Spec-Compliant API:** Built with FastAPI (`server/app.py`) for automated validation.
 - **Trajectory Logging:** Captures every thought and action for RL training.
 
+## 🔒 Privacy & Safety Disclaimer
+**All data, emails, and scenarios presented in this environment are 100% synthetically generated.** There is no Real PII (Personally Identifiable Information) or real-world credentials included. This simulation is built entirely for RL evaluation purposes.
+
 ## 📂 Project Structure
 - `environment.py`: Core RL-style environment logic.
 - `models.py`: Pydantic data models for Observations and Actions.
