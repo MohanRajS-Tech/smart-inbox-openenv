@@ -1,13 +1,11 @@
 import os
-import sys
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from typing import Dict, Any, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
-from environment import SmartInboxEnv
+from server.environment import SmartInboxEnv
 from models import EmailAction, EmailObservation, EmailState
 
 # Initialize the state-holding environment

@@ -2,7 +2,7 @@ import json
 import os
 from typing import List, Dict, Any
 from models import Email, EmailAction, EmailObservation, EmailState
-from grader import SmartInboxGrader
+from server.grader import SmartInboxGrader
 
 class SmartInboxEnv:
     def __init__(self):
