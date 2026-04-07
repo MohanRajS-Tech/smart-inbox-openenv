@@ -60,6 +60,10 @@ class SmartInboxEnv:
         pool: List[Dict]          = task_data.get("email_pool", [])
         select: Dict[str, int]    = task_data.get("select", {})
         rules: Dict[str, str]     = task_data.get("rules", {})
+        
+        # Save pools for mid-episode dynamic spawning
+        self._spawn_pool = pool
+        self._spawn_rules = rules
 
         # --- Step 1: Group the pool by category ---
         by_category: Dict[str, List[Dict]] = {}
@@ -163,8 +167,8 @@ class SmartInboxEnv:
                     self._state.work_folder_ids.append(action.email_id)
 
         # 2. Calculate Reward
-        new_score = self._calculate_score()
-        progress_gain = new_score - old_score
+        new_score_before_spawn = self._calculate_score()
+        progress_gain = new_score_before_spawn - old_score
         
         wrong_action_penalty = 0.0
         # If the action produced no progress, it was either incorrect, repeated, or unnecessary.
@@ -174,10 +178,37 @@ class SmartInboxEnv:
             
         # Reward = (Progress Gain) - (Temporal Pressure Penalty) - (Wrong Action Penalty)
         reward = round(progress_gain - self.STEP_PENALTY - wrong_action_penalty, 2)
-        self._state.score = new_score
+        
+        # 3. Dynamic Spawn Mechanic: Inject a new email every 3 steps (max 12 to fit in Gym)
+        spawn_message = ""
+        if self._state.step_count % 3 == 0 and len(self.emails) < 12:
+            if hasattr(self, '_spawn_pool') and self._spawn_pool:
+                template = random.choice(self._spawn_pool)
+                new_id = str(len(self.emails) + 1)
+                category = template.get("category", "other")
+                
+                self.emails.append(Email(
+                    id=new_id,
+                    sender=template["sender"],
+                    subject=template["subject"],
+                    snippet=template.get("snippet", ""),
+                    is_urgent=(category == "urgent")
+                ))
+                
+                # Expand ground truth so the grader knows about this new objective
+                rule = getattr(self, '_spawn_rules', {}).get(category)
+                if rule == "archive":
+                    self.current_gt["archived_ids"].append(new_id)
+                elif rule == "flag":
+                    self.current_gt["flagged_ids"].append(new_id)
+                elif rule and rule.startswith("move_to_folder"):
+                    self.current_gt["work_folder_ids"].append(new_id)
+                    
+                spawn_message = " [*NEW MAIL*]"
 
-        # 3. Return results
-        obs = self._get_obs(status, reward)
+        # 4. Update the final world state score and return
+        self._state.score = self._calculate_score()
+        obs = self._get_obs(status + spawn_message, reward)
         return obs, reward, obs.done, {}
 
 
