@@ -142,8 +142,8 @@ class SmartInboxEnv:
         # Find the target email object
         target = next((e for e in self.emails if e.id == action.email_id), None)
         if not target:
-            obs = self._get_obs(f"Email ID {action.email_id} not found", -self.STEP_PENALTY)
-            return obs, -self.STEP_PENALTY, obs.done, {}
+            obs = self._get_obs(f"Email ID {action.email_id} not found", -0.15)
+            return obs, -0.15, obs.done, {}
 
         # 1. Process the Action
         if action.action_type == "archive":
@@ -162,8 +162,16 @@ class SmartInboxEnv:
 
         # 2. Calculate Reward
         new_score = self._calculate_score()
-        # Reward = (Progress Gain) - (Temporal Pressure Penalty)
-        reward = round((new_score - old_score) - self.STEP_PENALTY, 2)
+        progress_gain = new_score - old_score
+        
+        wrong_action_penalty = 0.0
+        # If the action produced no progress, it was either incorrect, repeated, or unnecessary.
+        if progress_gain == 0.0:
+            wrong_action_penalty = 0.15
+            status += " (Incorrect/Ineffective)"
+            
+        # Reward = (Progress Gain) - (Temporal Pressure Penalty) - (Wrong Action Penalty)
+        reward = round(progress_gain - self.STEP_PENALTY - wrong_action_penalty, 2)
         self._state.score = new_score
 
         # 3. Return results

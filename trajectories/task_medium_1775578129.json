@@ -1,0 +1,50 @@
+[
+  {
+    "turn": 1,
+    "agent_thinking": "Taking golden action archive on email 2",
+    "action": {
+      "action_type": "archive",
+      "email_id": "2",
+      "folder_name": null
+    },
+    "reward": 0.24,
+    "goal_progress": 0.25,
+    "done": false
+  },
+  {
+    "turn": 2,
+    "agent_thinking": "Taking golden action archive on email 4",
+    "action": {
+      "action_type": "archive",
+      "email_id": "4",
+      "folder_name": null
+    },
+    "reward": 0.24,
+    "goal_progress": 0.5,
+    "done": false
+  },
+  {
+    "turn": 3,
+    "agent_thinking": "Taking golden action flag on email 1",
+    "action": {
+      "action_type": "flag",
+      "email_id": "1",
+      "folder_name": null
+    },
+    "reward": 0.24,
+    "goal_progress": 0.75,
+    "done": false
+  },
+  {
+    "turn": 4,
+    "agent_thinking": "Taking golden action flag on email 3",
+    "action": {
+      "action_type": "flag",
+      "email_id": "3",
+      "folder_name": null
+    },
+    "reward": 0.24,
+    "goal_progress": 1.0,
+    "done": true
+  }
+]
