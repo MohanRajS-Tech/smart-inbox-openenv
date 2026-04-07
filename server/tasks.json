@@ -1,44 +1,54 @@
 {
   "easy": {
-    "description": "Archive the 2 promotional emails (Pizza and Shoes) to declutter the inbox.",
-    "emails": [
-      {"id": "1", "sender": "Pizza", "subject": "BOGO Deal!", "is_urgent": false},
-      {"id": "2", "sender": "Shoes", "subject": "Sneaker sale", "is_urgent": false},
-      {"id": "3", "sender": "Boss", "subject": "Meeting at 5", "is_urgent": true}
-    ],
-    "ground_truth": {
-      "archived_ids": ["1", "2"],
-      "flagged_ids": [],
-      "work_folder_ids": []
-    }
+    "description": "Your inbox has promotional emails mixed with important ones. Archive ALL promotional emails to declutter your inbox. Leave urgent or important emails alone.",
+    "select": {"promo": 2, "urgent": 1},
+    "rules": {"promo": "archive"},
+    "email_pool": [
+      {"sender": "Pizza Place",   "subject": "BOGO Deal!",                   "snippet": "Buy one, get one free on all pizzas today.",         "category": "promo"},
+      {"sender": "Shoe Store",    "subject": "Weekend Sneaker Sale",          "snippet": "50% off all shoes. This weekend only.",              "category": "promo"},
+      {"sender": "Netflix",       "subject": "New shows added this week",     "snippet": "Check out the latest releases on your watchlist.",   "category": "promo"},
+      {"sender": "Amazon Deals",  "subject": "Flash Sale: 60% off Today",     "snippet": "Deals expire in 4 hours.",                          "category": "promo"},
+      {"sender": "LinkedIn",      "subject": "3 people viewed your profile",  "snippet": "See who's looking at your profile.",                 "category": "promo"},
+      {"sender": "Spotify",       "subject": "Your weekly playlist is ready", "snippet": "Discover new music picked for you.",                 "category": "promo"},
+      {"sender": "Boss",          "subject": "Meeting at 5pm",                "snippet": "Please confirm your attendance.",                    "category": "urgent"},
+      {"sender": "CEO",           "subject": "Q4 Review - Your Input Needed", "snippet": "Required before end of day.",                       "category": "urgent"},
+      {"sender": "HR Manager",    "subject": "Team Lunch RSVP by Noon",       "snippet": "Please confirm by 12pm today.",                     "category": "urgent"},
+      {"sender": "Director",      "subject": "1-on-1 Rescheduled to 3pm",    "snippet": "Please update your calendar.",                      "category": "urgent"}
+    ]
   },
   "medium": {
-    "description": "Flag the 2 urgent alerts (Security and HR) while archiving the 2 newsletters.",
-    "emails": [
-      {"id": "1", "sender": "Security", "subject": "LOGIN ALERT!", "is_urgent": true},
-      {"id": "2", "sender": "Newsletter", "subject": "Monday Tips", "is_urgent": false},
-      {"id": "3", "sender": "Sales", "subject": "Q4 Report Out", "is_urgent": false},
-      {"id": "4", "sender": "HR", "subject": "Vacation Policy", "is_urgent": true}
-    ],
-    "ground_truth": {
-      "archived_ids": ["2", "3"],
-      "flagged_ids": ["1", "4"],
-      "work_folder_ids": []
-    }
+    "description": "Your inbox has a mix of urgent alerts and newsletters. FLAG all urgent security or HR alerts. ARCHIVE all newsletters and promotional digests. Urgent emails have keywords like ALERT, Policy, Expires, or Emergency.",
+    "select": {"urgent": 2, "promo": 2},
+    "rules": {"urgent": "flag", "promo": "archive"},
+    "email_pool": [
+      {"sender": "Security System",  "subject": "LOGIN ALERT: Unusual Activity",  "snippet": "A login was detected from an unknown device.",       "category": "urgent"},
+      {"sender": "HR Department",    "subject": "Policy Update — Action Required", "snippet": "You must acknowledge by this Friday.",               "category": "urgent"},
+      {"sender": "IT Team",          "subject": "Your Password Expires Today",     "snippet": "Reset immediately to avoid lockout.",                "category": "urgent"},
+      {"sender": "Finance",          "subject": "Expense Report Due — EOD",        "snippet": "Submit your report before end of business day.",     "category": "urgent"},
+      {"sender": "Boss",             "subject": "EMERGENCY: Join meeting now",     "snippet": "Drop everything. Conference room B.",                "category": "urgent"},
+      {"sender": "Newsletter Co",    "subject": "Monday Morning Tips",             "snippet": "5 productivity hacks for the week ahead.",           "category": "promo"},
+      {"sender": "Sales Digest",     "subject": "Q4 Industry Report is Out",      "snippet": "Read the full industry analysis.",                   "category": "promo"},
+      {"sender": "Tech Trends",      "subject": "AI News You Missed This Week",    "snippet": "Top 10 stories in artificial intelligence.",         "category": "promo"},
+      {"sender": "Marketing Dept",   "subject": "Campaign Performance Results",    "snippet": "Click to see this month's metrics.",                 "category": "promo"},
+      {"sender": "Blog Digest",      "subject": "5 Articles Curated for You",     "snippet": "Catch up on what you missed.",                      "category": "promo"}
+    ]
   },
   "hard": {
-    "description": "Flag 2 high-priority alerts AND move 2 project-related emails to the 'Work' folder.",
-    "emails": [
-      {"id": "1", "sender": "IT", "subject": "SYSTEM DOWN", "is_urgent": true},
-      {"id": "2", "sender": "Client", "subject": "Project Budget Fix", "is_urgent": true},
-      {"id": "3", "sender": "PM", "subject": "Task: Update Docs", "is_urgent": false, "snippet": "move to work"},
-      {"id": "4", "sender": "Eng", "subject": "Bug: Fix Login", "is_urgent": false, "snippet": "move to work"},
-      {"id": "5", "sender": "Spam", "subject": "Click me!", "is_urgent": false}
-    ],
-    "ground_truth": {
-      "archived_ids": [],
-      "flagged_ids": ["1", "2"],
-      "work_folder_ids": ["3", "4"]
-    }
+    "description": "Critical mixed inbox. FLAG all high-priority alerts (system failures, client escalations). MOVE project task emails to the Work folder. IGNORE or leave spam alone — do NOT archive or flag it.",
+    "select": {"urgent": 2, "work": 2, "spam": 1},
+    "rules": {"urgent": "flag", "work": "move_to_folder|Work"},
+    "email_pool": [
+      {"sender": "IT Ops",       "subject": "SYSTEM DOWN — Production Outage",  "snippet": "All services offline. Immediate response required.",    "category": "urgent"},
+      {"sender": "Client A",     "subject": "Project Budget: Needs Approval",   "snippet": "Client is waiting. Escalated to priority.",             "category": "urgent"},
+      {"sender": "Security",     "subject": "DATA BREACH DETECTED",            "snippet": "Unauthorized access detected at 3:14AM.",               "category": "urgent"},
+      {"sender": "CEO Office",   "subject": "CRITICAL: Board Prep Required",   "snippet": "Need your slides before 9AM tomorrow.",                 "category": "urgent"},
+      {"sender": "PM Lead",      "subject": "Task: Update Project Docs",       "snippet": "Please move to work tracker and complete by Friday.",   "category": "work"},
+      {"sender": "Eng Lead",     "subject": "Bug: Fix Login Flow — Assigned",  "snippet": "Ticket #442. Belongs in your work queue.",             "category": "work"},
+      {"sender": "Design",       "subject": "Review: UI Mockups for Sprint 4", "snippet": "Needs your sign-off before dev starts.",               "category": "work"},
+      {"sender": "QA Team",      "subject": "Test Run Failed — Investigate",   "snippet": "3 critical tests failed in staging.",                   "category": "work"},
+      {"sender": "Spam Bot",     "subject": "CLICK ME! Win a FREE Prize!",     "snippet": "You have been selected. Claim now.",                    "category": "spam"},
+      {"sender": "Random Mailer","subject": "You WON the weekly lottery!",     "snippet": "Click to claim your $1000 reward.",                    "category": "spam"},
+      {"sender": "Unknown",      "subject": "FREE GIFT — Limited Time Only",   "snippet": "Act fast before it expires.",                          "category": "spam"}
+    ]
   }
 }

@@ -19,6 +19,7 @@ app = FastAPI(
 
 class ResetRequest(BaseModel):
     task_id: str = "easy"
+    seed: Optional[int] = None  # Set for reproducible episodes
 
 @app.get("/", include_in_schema=False)
 async def root():
@@ -28,8 +29,9 @@ async def root():
 @app.post("/reset", response_model=EmailObservation)
 async def reset(req: Optional[ResetRequest] = None):
     task_id = req.task_id if req else "easy"
+    seed = req.seed if req else None
     try:
-        obs = env.reset(task_id)
+        obs = env.reset(task_id, seed=seed)
         return obs
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -87,7 +89,7 @@ async def mcp_bridge(payload: Dict[str, Any]):
 
     try:
         if method == "reset":
-            obs = env.reset(params.get("task_id", "easy"))
+            obs = env.reset(params.get("task_id", "easy"), seed=params.get("seed"))
             result = obs.model_dump()
         elif method == "step":
             action = EmailAction(**params.get("action", {}))

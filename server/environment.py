@@ -1,6 +1,7 @@
 import json
 import os
-from typing import List, Dict, Any
+import random
+from typing import List, Dict, Any, Optional
 from models import Email, EmailAction, EmailObservation, EmailState
 from server.grader import SmartInboxGrader
 
@@ -16,27 +17,94 @@ class SmartInboxEnv:
             self.all_tasks = {}
 
         self._state = EmailState(episode_id="initial", task_id="easy")
-        self.emails = [] # Internal storage of all emails for the current task
-        self.current_gt = {} # Ground truth for the active task
-        self.STEP_PENALTY = 0.01 # The "Cost of Time"
+        self.emails = []       # Internal storage of all emails for the current episode
+        self.current_gt = {}   # Ground truth, built dynamically each reset
+        self.STEP_PENALTY = 0.01  # The "Cost of Time"
 
-    def reset(self, task_id: str = "easy"):
-        """Resets the environment and returns the initial observation."""
+    def reset(self, task_id: str = "easy", seed: Optional[int] = None):
+        """
+        Resets the environment with a procedurally generated inbox.
+
+        Randomly draws emails from the task's email_pool using the 'select'
+        counts per category. Ground truth is built dynamically from 'rules',
+        so the grader always reflects exactly which emails were drawn.
+
+        Args:
+            task_id: One of 'easy', 'medium', 'hard'.
+            seed: Optional integer seed. Set for reproducible episodes
+                  (e.g. for automated validation). Leave None for true randomness.
+        """
+        # Apply seed BEFORE any random operations
+        if seed is not None:
+            random.seed(seed)
+
         self._state = EmailState(episode_id=f"ep_{task_id}", task_id=task_id)
-        
+
         task_data = self.all_tasks.get(task_id, {})
         if not task_data:
-            print(f"Warning: Task {task_id} not found in tasks.json")
+            print(f"Warning: Task '{task_id}' not found in tasks.json")
             self.emails = []
             self.current_gt = {}
         else:
-            # Load emails as models
-            self.emails = [Email(**e) for e in task_data.get("emails", [])]
-            self.current_gt = task_data.get("ground_truth", {})
-            
+            self._build_episode_from_pool(task_data)
+
         self._state.total_emails = len(self.emails)
         # Return ONLY the observation (OpenEnv Spec)
         return self._get_obs("Inbox Reset", 0.0)
+
+    def _build_episode_from_pool(self, task_data: Dict[str, Any]):
+        """
+        Draws emails from the pool and constructs a fresh, randomized episode.
+        Ground truth is computed dynamically based on drawn emails + task rules.
+        """
+        pool: List[Dict]          = task_data.get("email_pool", [])
+        select: Dict[str, int]    = task_data.get("select", {})
+        rules: Dict[str, str]     = task_data.get("rules", {})
+
+        # --- Step 1: Group the pool by category ---
+        by_category: Dict[str, List[Dict]] = {}
+        for email_template in pool:
+            cat = email_template.get("category", "other")
+            by_category.setdefault(cat, []).append(email_template)
+
+        # --- Step 2: Randomly sample required count per category ---
+        sampled_emails: List[Dict] = []
+        for category, count in select.items():
+            available = by_category.get(category, [])
+            if len(available) < count:
+                print(f"Warning: Pool has only {len(available)} '{category}' emails, needed {count}.")
+            drawn = random.sample(available, min(count, len(available)))
+            for template in drawn:
+                sampled_emails.append({**template, "category": category})
+
+        # --- Step 3: Shuffle to remove category-ordering bias ---
+        random.shuffle(sampled_emails)
+
+        # --- Step 4: Assign fresh sequential IDs + build Email models ---
+        self.emails = []
+        self.current_gt = {"archived_ids": [], "flagged_ids": [], "work_folder_ids": []}
+
+        for i, template in enumerate(sampled_emails):
+            email_id = str(i + 1)
+            category = template["category"]
+
+            self.emails.append(Email(
+                id=email_id,
+                sender=template["sender"],
+                subject=template["subject"],
+                snippet=template.get("snippet", ""),
+                is_urgent=(category == "urgent"),
+            ))
+
+            # --- Step 5: Build ground truth from rules ---
+            rule = rules.get(category)  # e.g. "archive", "flag", "move_to_folder|Work"
+            if rule == "archive":
+                self.current_gt["archived_ids"].append(email_id)
+            elif rule == "flag":
+                self.current_gt["flagged_ids"].append(email_id)
+            elif rule and rule.startswith("move_to_folder"):
+                self.current_gt["work_folder_ids"].append(email_id)
+            # No rule (e.g. "spam") = intentionally ignored, not in ground truth
 
     def state(self) -> EmailState:
         """Mandatory: Returns the current full internal state."""
@@ -51,11 +119,11 @@ class SmartInboxEnv:
         # Filter: Hide emails already processed (Archived, Moved to Work, or Flagged)
         done_ids = self._state.archived_ids + self._state.work_folder_ids + self._state.flagged_ids
         visible = [e for e in self.emails if e.id not in done_ids]
-        
+
         # Determine if task is completed
         current_score = self._calculate_score()
         done = (current_score == 1.0) or (self._state.step_count >= self._state.max_steps)
-        
+
         return EmailObservation(
             emails=visible,
             last_action_status=status,
@@ -68,48 +136,47 @@ class SmartInboxEnv:
         """The core logic for 'Pro' actions."""
         self._state.step_count += 1
         old_score = self._calculate_score()
-        
+
         status = f"Action: {action.action_type}"
-        
+
         # Find the target email object
         target = next((e for e in self.emails if e.id == action.email_id), None)
         if not target:
             obs = self._get_obs(f"Email ID {action.email_id} not found", -self.STEP_PENALTY)
             return obs, -self.STEP_PENALTY, obs.done, {}
-        
+
         # 1. Process the Action
         if action.action_type == "archive":
             if action.email_id not in self._state.archived_ids:
                 self._state.archived_ids.append(action.email_id)
-        
+
         elif action.action_type == "flag":
             if action.email_id not in self._state.flagged_ids:
                 self._state.flagged_ids.append(action.email_id)
                 target.is_flagged = True
-                
+
         elif action.action_type == "move_to_folder":
             if action.folder_name == "Work":
                 if action.email_id not in self._state.work_folder_ids:
                     self._state.work_folder_ids.append(action.email_id)
-        
+
         # 2. Calculate Reward
         new_score = self._calculate_score()
         # Reward = (Progress Gain) - (Temporal Pressure Penalty)
         reward = round((new_score - old_score) - self.STEP_PENALTY, 2)
         self._state.score = new_score
-        
+
         # 3. Return results
         obs = self._get_obs(status, reward)
         return obs, reward, obs.done, {}
 
-if __name__ == "__main__":
-    # Internal test
-    env = SmartInboxEnv()
-    obs = env.reset("easy")
-    print(f"Task: {env._state.task_id} | Visible: {len(obs.emails)}")
-    
-    # Simulate a correct move
-    action = EmailAction(action_type="archive", email_id="1")
-    obs, reward, done, info = env.step(action)
-    print(f"Goal Progress: {obs.goal_progress} | Reward: {reward}")
 
+if __name__ == "__main__":
+    # Quick internal test: run 3 resets to prove randomization works
+    env = SmartInboxEnv()
+    for task in ["easy", "medium", "hard"]:
+        obs = env.reset(task)
+        print(f"\nTask: {task} | Visible: {len(obs.emails)} emails")
+        for e in obs.emails:
+            print(f"  [{e.id}] {e.sender} — {e.subject}")
+        print(f"  Ground truth: {env.current_gt}")
