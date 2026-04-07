@@ -58,6 +58,7 @@ def get_llm_action(client, obs, task_description, history=""):
     You are a Professional Smart Inbox Assistant. 
     CURRENT TASK: {task_description}
     PROGRESS: {obs.goal_progress * 100}% Complete.
+    STEPS REMAINING: {obs.steps_remaining} (You must reach 100% before this hits zero!)
     
     ⚠️ TIME IS LIMITED: Every action you take reduces your final reward by 1% (0.01 points).
     Minimize turns to maximize your score!

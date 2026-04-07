@@ -27,14 +27,15 @@ class SmartInboxGymEnv(gym.Env):
         # We flatten the EmailObservation into a numeric array for standard RL.
         # Max 15 emails. For each email we send 3 features:
         # [is_present (0/1), is_urgent (0/1), is_flagged (0/1)]
-        # Plus 1 global feature: [goal_progress]
-        # Total Shape: (15 * 3) + 1 = 46 dimensions
-        self.observation_space = spaces.Box(low=0.0, high=1.0, shape=(46,), dtype=np.float32)
+        # Plus 2 global features: [goal_progress, steps_remaining_normalized]
+        # Total Shape: (15 * 3) + 2 = 47 dimensions
+        self.observation_space = spaces.Box(low=0.0, high=1.0, shape=(47,), dtype=np.float32)
 
     def _encode_obs(self, obs):
         """Flattens the structured OpenEnv observation into a float32 array."""
-        encoded = np.zeros(46, dtype=np.float32)
+        encoded = np.zeros(47, dtype=np.float32)
         encoded[0] = float(obs.goal_progress)
+        encoded[1] = float(obs.steps_remaining) / 15.0 # Max Steps is 15 in state defaults
         
         # Cap at 15 to match our Box space
         for i, email in enumerate(obs.emails[:15]):
@@ -45,7 +46,7 @@ class SmartInboxGymEnv(gym.Env):
                 # This ensures consistent feature mapping for the neural network
                 eid_idx = int(email.id) - 1
                 if 0 <= eid_idx < 15:
-                    idx = 1 + (eid_idx * 3)
+                    idx = 2 + (eid_idx * 3)
                     encoded[idx] = 1.0     # is_present
                     encoded[idx+1] = 1.0 if getattr(email, "is_urgent", False) else 0.0
                     encoded[idx+2] = 1.0 if getattr(email, "is_flagged", False) else 0.0

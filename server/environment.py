@@ -123,13 +123,15 @@ class SmartInboxEnv:
         # Determine if task is completed
         current_score = self._calculate_score()
         done = (current_score == 1.0) or (self._state.step_count >= self._state.max_steps)
+        steps_remaining = max(0, self._state.max_steps - self._state.step_count)
 
         return EmailObservation(
             emails=visible,
             last_action_status=status,
             goal_progress=current_score,
             reward=reward,
-            done=done
+            done=done,
+            steps_remaining=steps_remaining
         )
 
     def step(self, action: EmailAction):

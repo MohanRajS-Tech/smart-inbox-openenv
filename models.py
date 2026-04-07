@@ -18,6 +18,7 @@ class EmailObservation(BaseModel):
     current_folder: str = "Inbox"
     last_action_status: Optional[str] = None
     goal_progress: float = 0.0 # From 0.0 to 1.0 (Progress toward the task)
+    steps_remaining: int = 15 # Temporal pressure signal
     reward: float = 0.0 # Points earned in the last step
     done: bool = False
 
