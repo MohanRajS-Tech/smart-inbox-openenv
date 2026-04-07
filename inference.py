@@ -35,6 +35,7 @@ def log_end(success: bool, steps: int, score: float, rewards: list[float]) -> No
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api.groq.com/openai/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "llama-3.1-8b-instant")
 HF_TOKEN = os.getenv("HF_TOKEN")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 BENCHMARK_NAME = os.getenv("SMART_INBOX_BENCHMARK", "smart_inbox_lite")
 TASK_NAME = os.getenv("SMART_INBOX_TASK", "easy")
 # --------------------------------------------------------------------------
@@ -111,13 +112,15 @@ def get_llm_action(client, obs, task_description, history=""):
         return f"Brain Error: {str(e)}", "none", "none", None
 
 def run_pro_agent(task_id="easy"):
-    # 1. Setup (Using mandatory OpenAI client)
-    if not HF_TOKEN:
-        print("❌ ERROR: HF_TOKEN not found in environment.")
+    # Auto-detect which token to use for local testing vs. Remote Judging
+    api_key = GROQ_API_KEY if "groq.com" in API_BASE_URL else HF_TOKEN
+    
+    if not api_key:
+        print("❌ ERROR: Required API Token not found in environment.")
         return 0.0
 
     http_client = httpx.Client(trust_env=False)
-    client = OpenAI(base_url=API_BASE_URL, api_key=HF_TOKEN, http_client=http_client)
+    client = OpenAI(base_url=API_BASE_URL, api_key=api_key, http_client=http_client)
     
     env = SmartInboxEnv()
     obs = env.reset(task_id)
