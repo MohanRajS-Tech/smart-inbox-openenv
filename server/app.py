@@ -11,6 +11,25 @@ from models import EmailAction, EmailObservation, EmailState
 # Initialize the state-holding environment
 env = SmartInboxEnv()
 
+# MANDATORY: List of tasks for the OpenEnv validator to enumerate
+TASKS = [
+    {
+        "id": "easy",
+        "description": "Archive the 2 promotional emails (Pizza and Shoes) to declutter the inbox.",
+        "difficulty": "easy"
+    },
+    {
+        "id": "medium",
+        "description": "Flag the 2 urgent alerts (Security and HR) while archiving the 2 newsletters.",
+        "difficulty": "medium"
+    },
+    {
+        "id": "hard",
+        "description": "Flag 2 high-priority alerts AND move 2 project-related emails to the 'Work' folder.",
+        "difficulty": "hard"
+    }
+]
+
 app = FastAPI(
     title="Smart Inbox Lite Service",
     version="1.0.0",
@@ -60,6 +79,11 @@ async def state():
 async def health():
     return {"status": "healthy", "env": "smart_inbox_lite"}
 
+@app.get("/tasks")
+async def list_tasks():
+    """Mandatory: Returns the list of tasks for the remote validator."""
+    return TASKS
+
 @app.get("/metadata")
 async def get_metadata():
     """Mandatory: Returns the environment metadata for the validator."""
@@ -68,7 +92,8 @@ async def get_metadata():
         "version": "1.0.0",
         "description": "A 3-task professional email triage environment with temporal step penalties.",
         "author": "Smart Inbox Team",
-        "standard_version": "1.0.0"
+        "standard_version": "1.0.0",
+        "tasks": TASKS
     }
 
 @app.get("/schema")

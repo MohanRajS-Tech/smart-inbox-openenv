@@ -1,47 +1,57 @@
+import asyncio
 import os
+import textwrap
 import json
-import time
 import httpx
-import sys
+from typing import List, Optional
+
 from openai import OpenAI
-from dotenv import load_dotenv
+from my_env_v4 import MyEnvV4Action, MyEnvV4Env
 
-# Load API keys from .env
-load_dotenv()
+# --------------------------------------------------------------------------
+# CONFIGURATION (Strict V4 Compliance)
+# --------------------------------------------------------------------------
+IMAGE_NAME = os.getenv("IMAGE_NAME", "smart_inbox_lite:latest")
+API_KEY = os.getenv("HF_TOKEN") or os.getenv("GROQ_API_KEY") or os.getenv("API_KEY") # Prioritize HF_TOKEN for judges
 
-# Ensure absolute paths to the project root and server directory are added
-project_root = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(project_root)
-sys.path.append(os.path.join(project_root, "server"))
+API_BASE_URL = os.getenv("API_BASE_URL") or "https://router.huggingface.co/v1"
+MODEL_NAME = os.getenv("MODEL_NAME") or "Qwen/Qwen2.5-72B-Instruct"
+TASK_NAME = os.getenv("SMART_INBOX_TASK", "easy")
+BENCHMARK = os.getenv("SMART_INBOX_BENCHMARK", "smart_inbox_lite")
 
-from server.environment import SmartInboxEnv
-from models import EmailAction
+MAX_STEPS = 15
+TEMPERATURE = 0.1
+MAX_TOKENS = 512
 
-# MANDATORY STDOUT LOGGING
+# Our environment produces a normalized score [0.0, 1.0] internally.
+# In the V4 spec loop, we calculate average or final score.
+# We will use the final observation's goal_progress as the ground truth score.
+SUCCESS_SCORE_THRESHOLD = 0.99 
+
+# --------------------------------------------------------------------------
+# MANDATORY STDOUT LOGGING (Strict Regex Patterns)
+# --------------------------------------------------------------------------
 def log_start(task: str, env: str, model: str) -> None:
     print(f"[START] task={task} env={env} model={model}", flush=True)
 
-def log_step(step: int, action: str, reward: float, done: bool, error: str = "null") -> None:
+def log_step(step: int, action: str, reward: float, done: bool, error: Optional[str]) -> None:
+    error_val = error if (error and error != "null") else "null"
     done_val = str(done).lower()
-    print(f"[STEP] step={step} action={action} reward={reward:.2f} done={done_val} error={error}", flush=True)
+    print(
+        f"[STEP] step={step} action={action} reward={reward:.2f} done={done_val} error={error_val}",
+        flush=True,
+    )
 
-def log_end(success: bool, steps: int, score: float, rewards: list[float]) -> None:
+def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> None:
     rewards_str = ",".join(f"{r:.2f}" for r in rewards)
+    # Spec requires lowercase booleans and 3-decimal score in log_end usually, 
+    # but the example showed 3 decimals for score.
     print(f"[END] success={str(success).lower()} steps={steps} score={score:.3f} rewards={rewards_str}", flush=True)
 
 # --------------------------------------------------------------------------
-# CONFIGURATION (Strict Compliance)
+# AGENT BRAIN (Smart Inbox Pro)
 # --------------------------------------------------------------------------
-API_BASE_URL = os.getenv("API_BASE_URL", "https://api.groq.com/openai/v1")
-MODEL_NAME = os.getenv("MODEL_NAME", "llama-3.1-8b-instant")
-HF_TOKEN = os.getenv("HF_TOKEN")
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-BENCHMARK_NAME = os.getenv("SMART_INBOX_BENCHMARK", "smart_inbox_lite")
-TASK_NAME = os.getenv("SMART_INBOX_TASK", "easy")
-# --------------------------------------------------------------------------
-
 def format_inbox(emails):
-    """Converts the list of Email objects into a readable string for the LLM."""
     if not emails:
         return "INBOX IS EMPTY"
     lines = []
@@ -50,124 +60,116 @@ def format_inbox(emails):
         lines.append(f"{flag_status}[{e.id}] FROM: {e.sender} | SUBJECT: {e.subject} | SNIPPET: {e.snippet}")
     return "\n".join(lines)
 
-def get_llm_action(client, obs, task_description, history=""):
-    """The brain of the agent using the MANDATORY OpenAI Client with Memory."""
-    
+def build_user_prompt(obs, history: List[str]) -> str:
     inbox_text = format_inbox(obs.emails)
-    
-    prompt = f"""
-    You are a Professional Smart Inbox Assistant. 
-    CURRENT TASK: {task_description}
-    PROGRESS: {obs.goal_progress * 100}% Complete.
-    STEPS REMAINING: {obs.steps_remaining} (You must reach 100% before this hits zero!)
-    
-    ⚠️ TIME IS LIMITED: Every action you take reduces your final reward by 1% (0.01 points).
-    Minimize turns to maximize your score!
+    return textwrap.dedent(
+        f"""
+        Goal: Clean the inbox based on the task rules.
+        Progress: {obs.goal_progress * 100}% Complete.
+        Steps Remaining: {obs.steps_remaining}
 
-    Recent History:
-    {history if history else "Start of task."}
+        Recent History:
+        {chr(10).join(history[-4:]) if history else "Start of task."}
 
-    Visible Inbox Contents (ONLY USE THESE IDs):
-    {inbox_text}
-    
-    Available Actions:
-    - 'archive': For spam, social, or newsletters.
-    - 'flag': For urgent security, boss, or HR alerts.
-    - 'move_to_folder': Use folder_name="Work" for project-related emails.
-    
-    Reply in JSON format:
-    {{
-        "thinking": "Analyze why the previous action worked or failed, then plan the next step from the VISIBLE IDs.",
-        "action_type": "archive/flag/move_to_folder",
-        "email_id": "ONE specific numeric ID from the list above",
-        "folder_name": "Folder name if moving (otherwise null)"
-    }}
-    """
-    
+        Visible Inbox Contents:
+        {inbox_text}
+
+        Reply in JSON format:
+        {{
+            "thinking": "Reasoning about your next move...",
+            "action_type": "archive/flag/move_to_folder",
+            "email_id": "Target ID",
+            "folder_name": "Folder if move_to_folder (else null)"
+        }}
+        """
+    ).strip()
+
+async def get_model_action(client: OpenAI, obs, history: List[str]) -> MyEnvV4Action:
+    user_prompt = build_user_prompt(obs, history)
     try:
-        # [DEBUG] logs help the user but are ignored by the grader
-        # print(f"[DEBUG] Calling AI Brain ({MODEL_NAME})...")
-        response = client.chat.completions.create(
+        completion = client.chat.completions.create(
             model=MODEL_NAME,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1,
-            response_format={ "type": "json_object" },
-            timeout=30.0 # Standard safety timeout
+            messages=[
+                {"role": "system", "content": "You are a Professional Smart Inbox Assistant. You ONLY use visible IDs. Return JSON."},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=TEMPERATURE,
+            max_tokens=MAX_TOKENS,
+            response_format={"type": "json_object"},
+            stream=False,
         )
-        
-        content = response.choices[0].message.content
+        content = completion.choices[0].message.content or "{}"
         data = json.loads(content)
         
-        # Robust handling for lists
-        if isinstance(data, list): data = data[0] if len(data) > 0 else {}
+        # Extract fields
+        a_type = str(data.get("action_type") or "none").lower()
+        eid = str(data.get("email_id") or "0")
+        folder = data.get("folder_name")
         
-        return (
-            data.get("thinking", "No reasoning provided"), 
-            str(data.get("action_type") or "none").lower(), 
-            str(data.get("email_id") or "none"), 
-            data.get("folder_name")
-        )
-            
-    except Exception as e:
-        return f"Brain Error: {str(e)}", "none", "none", None
+        return MyEnvV4Action(action_type=a_type, email_id=eid, folder_name=folder)
+    except Exception as exc:
+        print(f"[DEBUG] Model request failed: {exc}", flush=True)
+        return MyEnvV4Action(action_type="none", email_id="0")
 
-def run_pro_agent(task_id="easy"):
-    # Auto-detect which token to use for local testing vs. Remote Judging
-    api_key = GROQ_API_KEY if "groq.com" in API_BASE_URL else HF_TOKEN
-    
-    if not api_key:
-        print("❌ ERROR: Required API Token not found in environment.")
-        return 0.0
-
+# --------------------------------------------------------------------------
+# MAIN COMPLIANCE LOOP
+# --------------------------------------------------------------------------
+async def main() -> None:
+    # Use standard httpx client to avoid environment proxy issues
     http_client = httpx.Client(trust_env=False)
-    client = OpenAI(base_url=API_BASE_URL, api_key=api_key, http_client=http_client)
-    
-    env = SmartInboxEnv()
-    obs = env.reset(task_id)
-    task_desc = env.all_tasks.get(task_id, {}).get("description", "Clean the inbox")
-    
-    log_start(task=task_id, env=BENCHMARK_NAME, model=MODEL_NAME)
-    
-    total_turns = 0
-    rewards = []
-    success = False
-    
-    # 2. Episode Loop
-    history = []
-    try:
-        while not obs.done:
-            if not obs.emails or total_turns > 15:
-                break
-                
-            total_turns += 1
-            
-            # 3. Brain Call
-            history_str = "\n".join(history[-3:]) 
-            thinking, a_type, eid, folder = get_llm_action(client, obs, task_desc, history_str)
-            
-            # 4. Step execution
-            action_desc = f"{a_type}({eid})" if folder is None else f"move({eid},{folder})"
-            action = EmailAction(action_type=a_type, email_id=eid, folder_name=folder)
-            obs, reward, done, info = env.step(action)
-            
-            # 5. MANDATORY LOGGING
-            log_step(step=total_turns, action=action_desc, reward=reward, done=done)
-            
-            # Keep history for agent memory
-            rewards.append(reward)
-            history.append(f"Turn {total_turns}: {a_type}({eid}) -> Reward {reward:+.2f}")
-            
-    finally:
-        # Final Score Calculation (Must be normalized score in [0, 1])
-        final_score = obs.goal_progress
-        success = final_score >= 0.99
-        log_end(success=success, steps=total_turns, score=final_score, rewards=rewards)
-    
-    return final_score
+    client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY, http_client=http_client)
 
-def main():
-    # Only run the mandatory task defined by environment variables (Standard for Autograder)
-    run_pro_agent(TASK_NAME)
+    env = await MyEnvV4Env.from_docker_image(IMAGE_NAME)
+
+    history: List[str] = []
+    rewards: List[float] = []
+    steps_taken = 0
+    final_score = 0.0
+    success = False
+
+    log_start(task=TASK_NAME, env=BENCHMARK, model=MODEL_NAME)
+
+    try:
+        result = await env.reset(task_id=TASK_NAME)
+        obs = result.observation
+
+        for step in range(1, MAX_STEPS + 1):
+            if obs.done:
+                break
+
+            action = await get_model_action(client, obs, history)
+
+            result = await env.step(action)
+            obs = result.observation
+
+            reward = result.reward or 0.0
+            done = result.done
+            
+            # Extract error from info if present
+            error = result.info.get("error") if hasattr(result, "info") and result.info else None
+            if not error and "Incorrect/Ineffective" in obs.last_action_status:
+                error = "Ineffective action"
+
+            rewards.append(reward)
+            steps_taken = step
+            
+            log_step(step=step, action=str(action), reward=reward, done=done, error=error)
+
+            history.append(f"Step {step}: {action} -> reward {reward:+.2f}")
+
+            if done:
+                break
+
+        final_score = obs.goal_progress
+        success = final_score >= SUCCESS_SCORE_THRESHOLD
+
+    finally:
+        try:
+            await env.close()
+        except Exception as e:
+            print(f"[DEBUG] env.close() error: {e}", flush=True)
+        log_end(success=success, steps=steps_taken, score=final_score, rewards=rewards)
+
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
