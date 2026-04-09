@@ -133,6 +133,7 @@ class SmartInboxEnv:
             emails=visible,
             last_action_status=status,
             goal_progress=current_score,
+            score=current_score, # Alias for validator compliance
             reward=reward,
             done=done,
             steps_remaining=steps_remaining

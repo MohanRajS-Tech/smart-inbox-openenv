@@ -16,17 +16,20 @@ TASKS = [
     {
         "id": "easy",
         "description": "Archive the 2 promotional emails (Pizza and Shoes) to declutter the inbox.",
-        "difficulty": "easy"
+        "difficulty": "easy",
+        "grader": "programmatic"
     },
     {
         "id": "medium",
         "description": "Flag the 2 urgent alerts (Security and HR) while archiving the 2 newsletters.",
-        "difficulty": "medium"
+        "difficulty": "medium",
+        "grader": "programmatic"
     },
     {
         "id": "hard",
         "description": "Flag 2 high-priority alerts AND move 2 project-related emails to the 'Work' folder.",
-        "difficulty": "hard"
+        "difficulty": "hard",
+        "grader": "programmatic"
     }
 ]
 
