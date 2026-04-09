@@ -40,3 +40,10 @@ class EmailState(BaseModel):
     work_folder_ids: List[str] = []
     task_id: str = "easy" # 'easy', 'medium', 'hard'
     score: float = 0.0 # Normalized 0.0 to 1.0
+
+class StepResponse(BaseModel):
+    """Mandatory: Standard OpenEnv 1.0 step response schema."""
+    observation: EmailObservation
+    reward: float
+    done: bool
+    info: Dict[str, Any] = {}

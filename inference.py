@@ -160,7 +160,8 @@ async def main() -> None:
             if done:
                 break
 
-        final_score = obs.goal_progress
+        # Use the official environment score for the final result
+        final_score = obs.score
         success = final_score >= SUCCESS_SCORE_THRESHOLD
 
     finally:

@@ -6,7 +6,7 @@ from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 
 from server.environment import SmartInboxEnv
-from models import EmailAction, EmailObservation, EmailState
+from models import EmailAction, EmailObservation, EmailState, StepResponse
 
 # Initialize the state-holding environment
 env = SmartInboxEnv()
@@ -17,19 +17,26 @@ TASKS = [
         "id": "easy",
         "description": "Archive the 2 promotional emails (Pizza and Shoes) to declutter the inbox.",
         "difficulty": "easy",
-        "grader": "programmatic"
+        "grader_id": "programmatic"
     },
     {
         "id": "medium",
         "description": "Flag the 2 urgent alerts (Security and HR) while archiving the 2 newsletters.",
         "difficulty": "medium",
-        "grader": "programmatic"
+        "grader_id": "programmatic"
     },
     {
         "id": "hard",
         "description": "Flag 2 high-priority alerts AND move 2 project-related emails to the 'Work' folder.",
         "difficulty": "hard",
-        "grader": "programmatic"
+        "grader_id": "programmatic"
+    }
+]
+
+GRADERS = [
+    {
+        "id": "programmatic",
+        "type": "environment"
     }
 ]
 
@@ -58,7 +65,7 @@ async def reset(req: Optional[ResetRequest] = None):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/step")
+@app.post("/step", response_model=StepResponse)
 async def step(action: EmailAction):
     try:
         obs, reward, done, info = env.step(action)
@@ -96,7 +103,8 @@ async def get_metadata():
         "description": "A 3-task professional email triage environment with temporal step penalties.",
         "author": "Smart Inbox Team",
         "standard_version": "1.0.0",
-        "tasks": TASKS
+        "tasks": TASKS,
+        "graders": GRADERS
     }
 
 @app.get("/schema")
