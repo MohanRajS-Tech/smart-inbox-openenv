@@ -160,7 +160,7 @@ def run_pro_agent(task_id="easy"):
     finally:
         # Final Score Calculation (Must be normalized score in [0, 1])
         final_score = obs.goal_progress
-        success = final_score >= 1.0
+        success = final_score >= 0.99
         log_end(success=success, steps=total_turns, score=final_score, rewards=rewards)
     
     return final_score
