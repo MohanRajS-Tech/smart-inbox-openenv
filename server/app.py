@@ -15,21 +15,24 @@ env = SmartInboxEnv()
 TASKS = [
     {
         "id": "easy",
-        "description": "Archive the 2 promotional emails (Pizza and Shoes) to declutter the inbox.",
+        "description": "Archive the promotional emails (Pizza and Shoes) to declutter the inbox.",
         "difficulty": "easy",
-        "grader_id": "programmatic"
+        "grader_id": "programmatic",
+        "rubric_id": "programmatic"
     },
     {
         "id": "medium",
-        "description": "Flag the 2 urgent alerts (Security and HR) while archiving the 2 newsletters.",
+        "description": "Flag the urgent alerts (Security and HR) while archiving the newsletters.",
         "difficulty": "medium",
-        "grader_id": "programmatic"
+        "grader_id": "programmatic",
+        "rubric_id": "programmatic"
     },
     {
         "id": "hard",
-        "description": "Flag 2 high-priority alerts AND move 2 project-related emails to the 'Work' folder.",
+        "description": "Flag priority alerts AND move project emails to the 'Work' folder.",
         "difficulty": "hard",
-        "grader_id": "programmatic"
+        "grader_id": "programmatic",
+        "rubric_id": "programmatic"
     }
 ]
 
@@ -39,6 +42,8 @@ GRADERS = [
         "type": "environment"
     }
 ]
+
+RUBRICS = GRADERS # Internal V4 engine compatibility
 
 app = FastAPI(
     title="Smart Inbox Lite Service",
@@ -104,7 +109,8 @@ async def get_metadata():
         "author": "Smart Inbox Team",
         "standard_version": "1.0.0",
         "tasks": TASKS,
-        "graders": GRADERS
+        "graders": GRADERS,
+        "rubrics": RUBRICS
     }
 
 @app.get("/schema")
