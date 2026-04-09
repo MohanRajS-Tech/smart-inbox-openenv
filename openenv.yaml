@@ -1,4 +1,9 @@
+spec_version: 1
 name: smart_inbox_lite
+type: space
+runtime: fastapi
+app: server.app:app
+port: 8000
 version: "1.0.0"
 description: "A professional 3-task email triage environment with normalized scoring (0.0 - 1.0)."
 author: "Hackathon Participant"
