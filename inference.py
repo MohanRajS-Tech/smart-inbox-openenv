@@ -71,11 +71,11 @@ def format_inbox(emails):
         lines.append(f"{flag_status}[{e.id}] FROM: {e.sender} | SUBJECT: {e.subject} | SNIPPET: {e.snippet}")
     return "\n".join(lines)
 
-def build_user_prompt(obs, history: List[str]) -> str:
+def build_user_prompt(obs, history: List[str], task_id: str) -> str:
     inbox_text = format_inbox(obs.emails)
     return textwrap.dedent(
         f"""
-        TASK: {TASK_NAME.upper()}
+        TASK: {task_id.upper()}
         Progress: {obs.goal_progress * 100}% Complete.
         Steps Remaining: {obs.steps_remaining}
 
@@ -107,8 +107,7 @@ def build_user_prompt(obs, history: List[str]) -> str:
     ).strip()
 
 async def get_model_action(client: OpenAI, obs, history: List[str], task_id: str) -> MyEnvV4Action:
-    # Use the current task_id in the prompt
-    user_prompt = build_user_prompt(obs, history).replace(f"TASK: {TASK_NAME.upper()}", f"TASK: {task_id.upper()}")
+    user_prompt = build_user_prompt(obs, history, task_id)
     
     try:
         completion = client.chat.completions.create(
