@@ -136,9 +136,15 @@ class SmartInboxEnv:
 
 
     def step(self, action: EmailAction):
-        """The core logic for 'Pro' actions."""
+        """The core logic for 'Pro' actions with improved robustness and metadata."""
         self._state.step_count += 1
         old_score = self._calculate_score()
+        
+        info = {
+            "action_result": "no_change",
+            "spawned_email_id": None,
+            "gt_size": sum(len(ids) for ids in self.current_gt.values())
+        }
 
         status = f"Action: {action.action_type}"
 
@@ -146,22 +152,26 @@ class SmartInboxEnv:
         target = next((e for e in self.emails if e.id == action.email_id), None)
         if not target:
             obs = self._get_obs(f"Email ID {action.email_id} not found", -0.15)
-            return obs, -0.15, obs.done, {}
+            info["action_result"] = "fail"
+            return obs, -0.15, obs.done, info
 
         # 1. Process the Action
         if action.action_type == "archive":
             if action.email_id not in self._state.archived_ids:
                 self._state.archived_ids.append(action.email_id)
+                info["action_result"] = "success"
 
         elif action.action_type == "flag":
             if action.email_id not in self._state.flagged_ids:
                 self._state.flagged_ids.append(action.email_id)
                 target.is_flagged = True
+                info["action_result"] = "success"
 
         elif action.action_type == "move_to_folder":
             if action.folder_name == "Work":
                 if action.email_id not in self._state.work_folder_ids:
                     self._state.work_folder_ids.append(action.email_id)
+                    info["action_result"] = "success"
 
         # 2. Calculate Reward
         new_score_before_spawn = self._calculate_score()
@@ -169,9 +179,10 @@ class SmartInboxEnv:
         
         wrong_action_penalty = 0.0
         # If the action produced no progress, it was either incorrect, repeated, or unnecessary.
-        if progress_gain == 0.0:
+        if progress_gain == 0.0 and info["action_result"] != "success":
             wrong_action_penalty = 0.15
             status += " (Incorrect/Ineffective)"
+            info["action_result"] = "fail"
             
         # Reward = (Progress Gain) - (Temporal Pressure Penalty) - (Wrong Action Penalty)
         reward = round(progress_gain - self.STEP_PENALTY - wrong_action_penalty, 2)
@@ -192,6 +203,10 @@ class SmartInboxEnv:
                     is_urgent=(category == "urgent")
                 ))
                 
+                # CRITICAL Fix: Keep total_emails consistent for progress metrics
+                self._state.total_emails = len(self.emails)
+                info["spawned_email_id"] = new_id
+                
                 # Expand ground truth so the grader knows about this new objective
                 rule = getattr(self, '_spawn_rules', {}).get(category)
                 if rule == "archive":
@@ -202,11 +217,12 @@ class SmartInboxEnv:
                     self.current_gt["work_folder_ids"].append(new_id)
                     
                 spawn_message = " [*NEW MAIL*]"
+                info["gt_size"] = sum(len(ids) for ids in self.current_gt.values())
 
         # 4. Update the final world state score and return
         self._state.score = self._calculate_score()
         obs = self._get_obs(status + spawn_message, reward)
-        return obs, reward, obs.done, {}
+        return obs, reward, obs.done, info
 
 
 if __name__ == "__main__":
