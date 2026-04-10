@@ -87,11 +87,11 @@ def run_simulation():
         print(f"--- Result: {task_id.upper()} ---")
         print(f"Steps: {steps} | Cumulative Reward: {total_reward:.2f} | Final Score: {obs.score:.2f}")
         
-        if obs.score < 1.0:
-            print(f"  [X] FAILED: Final score {obs.score:.2f} < 1.0")
+        if obs.score < 0.99:
+            print(f"  [X] FAILED: Final score {obs.score:.2f} < 0.99")
             overall_success = False
         else:
-            print(f"  [OK] PASSED: Task solved perfectly.")
+            print(f"  [OK] PASSED: Task solved (Score: {obs.score:.2f})")
 
     print("\n" + "=" * 60)
     if overall_success:

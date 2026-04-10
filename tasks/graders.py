@@ -47,6 +47,8 @@ def grade_task(state: Any, ground_truth: Dict[str, Any]) -> float:
 
     # Normalized Score (Avoid division by zero)
     if total_required == 0:
-        return 1.0
+        return 0.99
         
-    return round(correct / total_required, 2)
+    raw_score = correct / total_required
+    clamped_score = max(0.01, min(0.99, raw_score))
+    return round(clamped_score, 2)
