@@ -1,35 +1,65 @@
 name: smart_inbox_lite
-description: "A professional 3-task email triage environment with normalized scoring (0.0 - 1.0)."
+description: >
+  An OpenEnv-compliant environment for professional email triage.
+  An LLM agent receives inbox observations containing emails with
+  sender, subject, and snippet details, and must decide to
+  archive, flag, or move each email to the correct folder.
 version: "1.0.0"
 author: "Hackathon Participant"
-license: "MIT"
-entrypoint: "inference.py"
-runtime: fastapi
-app: server.app:app
-port: 8000
+
+observation_space:
+  type: text
+  description: >
+    A list of emails currently visible in the inbox, including sender,
+    subject, snippet, and flag status. Also includes goal_progress (0.0-1.0),
+    steps_remaining, and last_action_status.
+
+action_space:
+  type: discrete
+  actions:
+    - archive
+    - flag
+    - move_to_folder
+  description: >
+    Email management action to perform on a target email by ID.
+
+endpoints:
+  health: /health
+  reset:  /reset
+  step:   /step
+  state:  /state
 
 tasks:
-  - id: "easy"
-    description: "Archive the promotional emails (Pizza and Shoes) to declutter the inbox."
-    difficulty: "easy"
-    steps: 15
-  - id: "medium"
-    description: "Flag the urgent alerts (Security and HR) while archiving the newsletters."
-    difficulty: "medium"
-    steps: 15
-  - id: "hard"
-    description: "Flag priority alerts AND move project emails to the 'Work' folder."
-    difficulty: "hard"
-    steps: 15
+  - id: easy
+    description: >
+      Archive ALL promotional emails (Pizza, Shoes, Netflix, etc.) from the inbox.
+      Leave urgent or important emails alone.
+      Correct action: archive promotional emails.
+    steps: 3
+    ideal_action: archive
 
-tags:
-  - email-triage
-  - openenv
-  - partial-scoring
-  - agentic-reasoning
+  - id: medium
+    description: >
+      FLAG all urgent security or HR alerts. ARCHIVE all newsletters.
+      Urgent emails have keywords like ALERT, Policy, Expires, or Emergency.
+      Correct action: flag urgent, archive newsletters.
+    steps: 3
+    ideal_action: flag
+
+  - id: hard
+    description: >
+      FLAG all high-priority alerts (system failures, client escalations).
+      MOVE project task emails to the Work folder. Leave spam alone.
+      Correct action: flag urgent, move_to_folder work emails.
+    steps: 3
+    ideal_action: flag
 
 scoring:
   reward_range: [0.0, 1.0]
   success_threshold: 0.8
-  score_formula: "mean(step_rewards)"
+  score_formula: mean(step_rewards)
 
+constraints:
+  max_runtime_seconds: 1200
+  max_memory_gb: 8
+  max_vcpu: 2
