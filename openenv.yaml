@@ -1,38 +1,35 @@
-spec_version: 1
 name: smart_inbox_lite
-type: space
-runtime: fastapi
-app: server.app:app
-port: 8000
-version: "1.0.0"
 description: "A professional 3-task email triage environment with normalized scoring (0.0 - 1.0)."
+version: "1.0.0"
 author: "Hackathon Participant"
 license: "MIT"
 entrypoint: "inference.py"
+runtime: fastapi
+app: server.app:app
+port: 8000
+
 tasks:
   - id: "easy"
     description: "Archive the promotional emails (Pizza and Shoes) to declutter the inbox."
     difficulty: "easy"
-    grader_id: "programmatic"
-    rubric_id: "programmatic"
+    steps: 15
   - id: "medium"
     description: "Flag the urgent alerts (Security and HR) while archiving the newsletters."
     difficulty: "medium"
-    grader_id: "programmatic"
-    rubric_id: "programmatic"
+    steps: 15
   - id: "hard"
     description: "Flag priority alerts AND move project emails to the 'Work' folder."
     difficulty: "hard"
-    grader_id: "programmatic"
-    rubric_id: "programmatic"
-graders:
-  - id: "programmatic"
-    type: "environment"
-rubrics:
-  - id: "programmatic"
-    type: "environment"
+    steps: 15
+
 tags:
   - email-triage
   - openenv
   - partial-scoring
   - agentic-reasoning
+
+scoring:
+  reward_range: [0.0, 1.0]
+  success_threshold: 0.8
+  score_formula: "mean(step_rewards)"
+

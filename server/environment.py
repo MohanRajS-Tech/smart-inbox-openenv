@@ -3,18 +3,13 @@ import os
 import random
 from typing import List, Dict, Any, Optional
 from models import Email, EmailAction, EmailObservation, EmailState
-from server.grader import SmartInboxGrader
+from tasks.definitions import TASKS
+from tasks.graders import grade_task
 
 class SmartInboxEnv:
     def __init__(self):
-        # Load tasks from tasks.json
-        tasks_path = os.path.join(os.path.dirname(__file__), "tasks.json")
-        try:
-            with open(tasks_path, "r") as f:
-                self.all_tasks = json.load(f)
-        except Exception as e:
-            print(f"Error loading tasks.json: {e}")
-            self.all_tasks = {}
+        # Load tasks from the new root-level definitions
+        self.all_tasks = TASKS
 
         self._state = EmailState(episode_id="initial", task_id="easy")
         self.emails = []       # Internal storage of all emails for the current episode
@@ -42,7 +37,7 @@ class SmartInboxEnv:
 
         task_data = self.all_tasks.get(task_id, {})
         if not task_data:
-            print(f"Warning: Task '{task_id}' not found in tasks.json")
+            print(f"Warning: Task '{task_id}' not found in tasks definitions")
             self.emails = []
             self.current_gt = {}
         else:
@@ -115,8 +110,8 @@ class SmartInboxEnv:
         return self._state
 
     def _calculate_score(self):
-        """Uses the external SmartInboxGrader to calculate the current score."""
-        return SmartInboxGrader.calculate_score(self._state, self.current_gt)
+        """Uses the standardized grader to calculate the current score."""
+        return grade_task(self._state, self.current_gt)
 
     def _get_obs(self, status: str, reward: float):
         """Provides the current view to the agent."""
@@ -138,6 +133,7 @@ class SmartInboxEnv:
             done=done,
             steps_remaining=steps_remaining
         )
+
 
     def step(self, action: EmailAction):
         """The core logic for 'Pro' actions."""

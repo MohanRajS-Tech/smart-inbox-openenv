@@ -1,4 +1,4 @@
-{
+TASKS = {
   "easy": {
     "description": "Your inbox has promotional emails mixed with important ones. Archive ALL promotional emails to declutter your inbox. Leave urgent or important emails alone.",
     "select": {"promo": 2, "urgent": 1},
