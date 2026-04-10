@@ -49,8 +49,19 @@ def log_end(success: bool, steps: int, score: float, rewards: List[float]) -> No
     print(f"[END] success={str(success).lower()} steps={steps} score={score:.3f} rewards={rewards_str}", flush=True)
 
 # --------------------------------------------------------------------------
-# AGENT BRAIN
+# AGENT BRAIN (Pro Reasoning with CoT)
 # --------------------------------------------------------------------------
+SYSTEM_PROMPT = textwrap.dedent("""
+    You are a Professional Smart Inbox Assistant. Your goal is to clean the inbox with maximum efficiency.
+    
+    CRITICAL RULES:
+    1. Only use visible Email IDs.
+    2. Be decisive. Every step costs -0.01 points (Temporal Pressure).
+    3. Be precise. Incorrect actions cost -0.15 points.
+    4. Use Chain-of-Thought: always reason through the task rules before choosing an action.
+    5. Return your plan and action in valid JSON format.
+""").strip()
+
 def format_inbox(emails):
     if not emails:
         return "INBOX IS EMPTY"
@@ -64,33 +75,46 @@ def build_user_prompt(obs, history: List[str]) -> str:
     inbox_text = format_inbox(obs.emails)
     return textwrap.dedent(
         f"""
-        Goal: Clean the inbox based on the task rules.
+        TASK: {TASK_NAME.upper()}
         Progress: {obs.goal_progress * 100}% Complete.
         Steps Remaining: {obs.steps_remaining}
 
-        Recent History:
-        {chr(10).join(history[-4:]) if history else "Start of task."}
-
-        Visible Inbox Contents:
+        INBOX STATUS:
         {inbox_text}
 
-        Reply in JSON format:
+        OPERATIONAL HISTORY (Last 4):
+        {chr(10).join(history[-4:]) if history else "Start of task."}
+
+        REWARD FEEDBACK:
+        Current Step Cost: -0.01
+        Mistake Penalty: -0.15
+        Success Reward: +Progress Gain
+
+        INSTRUCTIONS:
+        1. Analyze the inbox.
+        2. Identify the highest priority email according to the task difficulty rules.
+        3. Explain your reasoning in the 'thinking' field.
+        4. Provide the 'action_type', 'email_id', and 'folder_name' (if needed).
+
+        JSON RESPONSE FORMAT:
         {{
-            "thinking": "Reasoning about your next move...",
+            "thinking": "Reasoning about the task rules and visible emails...",
             "action_type": "archive/flag/move_to_folder",
             "email_id": "Target ID",
-            "folder_name": "Folder if move_to_folder (else null)"
+            "folder_name": "Folder Name (e.g., 'Work') or null"
         }}
         """
     ).strip()
 
-async def get_model_action(client: OpenAI, obs, history: List[str]) -> MyEnvV4Action:
-    user_prompt = build_user_prompt(obs, history)
+async def get_model_action(client: OpenAI, obs, history: List[str], task_id: str) -> MyEnvV4Action:
+    # Use the current task_id in the prompt
+    user_prompt = build_user_prompt(obs, history).replace(f"TASK: {TASK_NAME.upper()}", f"TASK: {task_id.upper()}")
+    
     try:
         completion = client.chat.completions.create(
             model=MODEL_NAME,
             messages=[
-                {"role": "system", "content": "You are a Professional Smart Inbox Assistant. You ONLY use visible IDs. Return JSON."},
+                {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt},
             ],
             temperature=TEMPERATURE,
@@ -104,6 +128,10 @@ async def get_model_action(client: OpenAI, obs, history: List[str]) -> MyEnvV4Ac
         a_type = str(data.get("action_type") or "none").lower()
         eid = str(data.get("email_id") or "0")
         folder = data.get("folder_name")
+
+        # Log the thinking process for debugging
+        thinking = data.get("thinking", "No reasoning provided")
+        # print(f"[DEBUG] Thinking: {thinking}", flush=True)
 
         return MyEnvV4Action(action_type=a_type, email_id=eid, folder_name=folder)
     except Exception as exc:
@@ -136,7 +164,7 @@ async def run_task(client: OpenAI, env: MyEnvV4Env, task_name: str) -> None:
             if obs.done:
                 break
 
-            action = await get_model_action(client, obs, history)
+            action = await get_model_action(client, obs, history, task_name)
             result = await env.step(action)
             obs = result.observation
 
