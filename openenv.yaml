@@ -23,10 +23,12 @@ action_space:
     - redact
     - report_as_phishing
     - check_policy
+    - search_memory
   description: >
     Email management action. NOTE: Redact is MANDATORY for emails containing PII. 
     report_as_phishing is MANDATORY for adversarial/phishing emails.
     check_policy is REQUIRED for Finance/IT requests to determine the correct action.
+    search_memory is REQUIRED for resolving historical conflicts or preference matches.
 
 endpoints:
   health: /health

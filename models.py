@@ -23,14 +23,16 @@ class EmailObservation(BaseModel):
     last_action_status: Optional[str] = None
     goal_progress: float = 0.01 # From 0.0 to 1.0 (Progress toward the task)
     score: float = 0.01 # Standard OpenEnv field for grader verification
+    user_context: str = "" # [NEW] Situational Awareness (e.g. OOO status)
     steps_remaining: int = 15 # Temporal pressure signal
     reward: float = 0.01 # Points earned in the last step
     done: bool = False
 
 class EmailAction(BaseModel):
     """The move an agent can make. This is the SPEC-COMPLIANT action."""
-    action_type: str = Field(..., description="Action: 'archive', 'flag', 'move_to_folder', 'redact', 'report_as_phishing', 'check_policy'")
+    action_type: str = Field(..., description="Action: 'archive', 'flag', 'move_to_folder', 'redact', 'report_as_phishing', 'check_policy', 'search_memory'")
     email_id: str = Field(..., description="The ID of the target email")
+    query: Optional[str] = Field(None, description="Search term (if 'search_memory')")
     folder_name: Optional[str] = Field(None, description="Target folder name (if 'move_to_folder')")
 
 class EmailState(BaseModel):
@@ -46,6 +48,8 @@ class EmailState(BaseModel):
     phishing_reported_ids: List[str] = [] # IDs of emails reported as phishing
     policy_checked_ids: List[str] = [] # IDs of emails where policy was consulted
     policy_required_ids: List[str] = [] # IDs of emails that REQUIRED a policy check
+    memory_searched_ids: List[str] = [] # [NEW] IDs of emails where memory search was performed
+    memory_required_ids: List[str] = [] # [NEW] IDs of emails that REQUIRED a memory lookup
     security_breach: bool = False # Flags if PII was mishandled or social engineering clicked
     task_id: str = "easy" # 'easy', 'medium', 'hard', 'expert', 'insane'
     score: float = 0.01 # Normalized 0.01 to 0.99

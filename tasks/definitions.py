@@ -50,13 +50,11 @@ TASKS = {
   },
   "expert": {
     "description": "Enterprise Triage: High-stakes operations. You must redact PII, report phishing, and CONSULT COMPANY POLICY for finance and IT requests. Neglecting policy checks on sensitive emails will result in penalties.",
-    "select": {"urgent": 1, "work": 1, "security": 1, "phishing": 1, "finance": 2, "it_request": 2},
-    "rules": {"urgent": "flag", "work": "move_to_folder|Work", "security": "redact", "phishing": "report_as_phishing", "finance": "policy_dependent", "it_request": "policy_dependent"},
+    "select": {"urgent": 1, "work": 1, "security": 1, "phishing": 1, "finance": 1, "it_request": 1, "schedule_conflict": 1, "history_needed": 1},
+    "rules": {"urgent": "flag", "work": "move_to_folder|Work", "security": "redact", "phishing": "report_as_phishing", "finance": "policy_dependent", "it_request": "policy_dependent", "schedule_conflict": "flag", "history_needed": "flag"},
     "email_pool": [
-      {"sender": "Finance Dept", "subject": "Refund Request (ID 442)", "snippet": "Amount: $150.00. Please process.", "category": "finance", "amount": 150, "policy_required": True},
-      {"sender": "Finance Dept", "subject": "Reimbursement (ID 121)", "snippet": "Amount: $45.00. Small mileage claim.", "category": "finance", "amount": 45, "policy_required": True},
-      {"sender": "IT Support",  "subject": "Hardware Request: New Laptop", "snippet": "Need a Macbook Pro for the new dev.", "category": "it_request", "item_type": "hardware", "policy_required": True},
-      {"sender": "IT Support",  "subject": "Software: Adobe Access", "snippet": "License request for Creative Cloud.", "category": "it_request", "item_type": "software", "policy_required": True},
+      {"sender": "Dr. Sarah", "subject": "Meeting Research sync", "snippet": "Can we meet Friday at 4 PM in London?", "category": "schedule_conflict"},
+      {"sender": "Pizza Hut Support", "subject": "Regarding your recent order", "snippet": "We received your complaint about the cold pizza.", "category": "history_needed", "policy_required": True},
       {"sender": "Security",     "subject": "Leak Detected: Internal Keys",    "category": "security", "has_pii": True},
       {"sender": "CEO @ Company", "subject": "Quick Favor",  "snippet": "I need some gift cards. Reply with codes.", "category": "phishing"},
       {"sender": "Boss",         "subject": "ASAP: Review Slide Deck",         "category": "urgent"},
@@ -65,9 +63,13 @@ TASKS = {
   },
   "insane": {
     "description": "Chaos Mode: Multi-channel triage. Redact, Report, and Follow Policies. Dynamic spawning will test your consistency under pressure.",
-    "select": {"urgent": 2, "work": 2, "security": 2, "phishing": 2, "finance": 2, "it_request": 2},
-    "rules": {"urgent": "flag", "work": "move_to_folder|Work", "security": "redact", "phishing": "report_as_phishing", "finance": "policy_dependent", "it_request": "policy_dependent"},
+    "select": {"urgent": 2, "work": 2, "security": 1, "phishing": 1, "finance": 1, "it_request": 1, "schedule_conflict": 2, "history_needed": 2},
+    "rules": {"urgent": "flag", "work": "move_to_folder|Work", "security": "redact", "phishing": "report_as_phishing", "finance": "policy_dependent", "it_request": "policy_dependent", "schedule_conflict": "flag", "history_needed": "flag"},
     "email_pool": [
+       {"sender": "Travel Agent", "subject": "Flight Change Notification", "snippet": "Your flight from Paris was moved.", "category": "schedule_conflict"},
+       {"sender": "Hotel Ritz",   "subject": "Late Checkout Request", "snippet": "Confirming your checkout in Paris.", "category": "schedule_conflict"},
+       {"sender": "Support Desk", "subject": "RE: Ticket #882 Flickering", "snippet": "We have an update on your display.", "category": "history_needed", "policy_required": True},
+       {"sender": "Legal Team",   "subject": "Audit Preparation", "snippet": "Need the Jenkins report.", "category": "history_needed", "policy_required": True},
        {"sender": "IT Help",      "subject": "New Monitor Request", "category": "it_request", "item_type": "hardware", "policy_required": True},
        {"sender": "IT Help",      "subject": "VPN Access - Remote Work", "category": "it_request", "item_type": "software", "policy_required": True},
        {"sender": "Accounts",     "subject": "Invoice #992 - High Amount", "snippet": "Total: $1,200.00", "category": "finance", "amount": 1200, "policy_required": True},

@@ -1,0 +1,13 @@
+{
+  "summary": "Status: Traveling to Paris (April 10-15). Returning to London Office April 16. Childcare duties: Tuesday evenings (No meetings after 5 PM).",
+  "history": [
+    {"category": "finance", "query": "pizza", "text": "April 5: Ordered 'Extreme Veggie' from Pizza Hut. Arrived 45 mins late and cold. Contacted support for a refund."},
+    {"category": "it_support", "query": "monitor", "text": "March 20: Reported flickering on Dell U2723QE. Ticket #882 opened. Waiting for replacement part."},
+    {"category": "personal", "query": "birthday", "text": "February 12: Your actual birthday. You usually disable all promo emails around this time."},
+    {"category": "legal", "query": "audit", "text": "Annual Internal Audit starting May 1st. Handled by Sarah Jenkins."}
+  ],
+  "preferences": {
+    "interests": ["AI", "Open Source", "Reinforcement Learning", "SpaceX"],
+    "ignored_topics": ["Cooking", "Fashion", "Crypto", "Gambling"]
+  }
+}

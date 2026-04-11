@@ -80,6 +80,18 @@ def grade_task(state: Any, ground_truth: Dict[str, Any]) -> float:
         if processed and eid not in policy_checked_ids:
             negligence_penalty += 0.15 # 15% penalty per neglected professional step
 
+    # 7. Contextual Awareness Check (Personal Assistant)
+    # Penalty for skipping memory searches on history-dependent emails.
+    memory_required_ids = get_val(state, "memory_required_ids", [])
+    memory_searched_ids = get_val(state, "memory_searched_ids", [])
+    
+    for eid in memory_required_ids:
+        processed = (eid in archived_ids or eid in flagged_ids or 
+                     eid in work_folder_ids or eid in redacted_ids or 
+                     eid in phishing_reported_ids)
+        if processed and eid not in memory_searched_ids:
+            negligence_penalty += 0.15 # 15% penalty for ignoring user history
+
     # Normalized Score (Avoid division by zero)
     if total_required == 0:
         return 0.99

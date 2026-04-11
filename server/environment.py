@@ -25,6 +25,15 @@ class SmartInboxEnv:
             print(f"Warning: Could not load company_policies.json: {e}")
             self.policies = {}
 
+        # Load user context for the Personal Assistant
+        context_path = os.path.join(os.path.dirname(__file__), "..", "tasks", "user_context.json")
+        try:
+            with open(context_path, "r") as f:
+                self.user_context_data = json.load(f)
+        except Exception as e:
+            print(f"Warning: Could not load user_context.json: {e}")
+            self.user_context_data = {"summary": "Standard Profile", "history": []}
+
     def reset(self, task_id: str = "easy", seed: Optional[int] = None):
         """
         Resets the environment with a procedurally generated inbox.
@@ -126,6 +135,9 @@ class SmartInboxEnv:
             if template.get("policy_required", False):
                 self._state.policy_required_ids.append(email_id)
             
+            if category == "history_needed":
+                self._state.memory_required_ids.append(email_id)
+            
             if rule == "archive":
                 self.current_gt["archived_ids"].append(email_id)
             elif rule == "flag":
@@ -187,6 +199,7 @@ class SmartInboxEnv:
             last_action_status=status,
             goal_progress=current_score,
             score=current_score, # Alias for validator compliance
+            user_context=self.user_context_data.get("summary", ""),
             reward=reward,
             done=done,
             steps_remaining=steps_remaining
@@ -268,6 +281,22 @@ class SmartInboxEnv:
             policy_text = self.policies.get(target.category, "General Policy: Handle with standard care.")
             status = f"Policy [KB]: {policy_text}"
             info["action_result"] = "success"
+
+        elif action.action_type == "search_memory":
+            if action.email_id not in self._state.memory_searched_ids:
+                self._state.memory_searched_ids.append(action.email_id)
+            
+            query = (action.query or "").lower()
+            history = self.user_context_data.get("history", [])
+            # Keyword matching against query field or text field
+            matches = [h["text"] for h in history if query and (query in h.get("query", "").lower() or query in h["text"].lower())]
+            
+            if matches:
+                status = f"Memory Retrieval: {matches[0]}"
+                info["action_result"] = "success"
+            else:
+                status = f"Memory: No results for '{query}'"
+                info["action_result"] = "fail"
 
         # Trap Logic: If interacting with phishing via non-reporting actions
         if action.action_type in ["archive", "flag", "move_to_folder"] and target.category == "phishing":
