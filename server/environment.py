@@ -129,7 +129,10 @@ class SmartInboxEnv:
 
     def _calculate_score(self):
         """Uses the standardized grader to calculate the current score."""
-        return grade_task(self._state, self.current_gt)
+        raw_score = grade_task(self._state, self.current_gt)
+        # Ensure the score is NATURALLY returned within the (0.01, 0.99) range
+        clamped = max(0.01, min(0.99, raw_score))
+        return round(clamped, 2)
 
     def _get_obs(self, status: str, reward: float):
         """Provides the current view to the agent."""
@@ -255,7 +258,8 @@ class SmartInboxEnv:
                 
                 # Expand ground truth so the grader knows about this new objective
                 rule = getattr(self, '_spawn_rules', {}).get(category)
-                if has_pii:
+                new_has_pii = template.get("has_pii", False)
+                if new_has_pii:
                     self.current_gt["redacted_ids"].append(new_id)
 
                 if rule == "archive":

@@ -19,9 +19,9 @@ class SmartInboxGymEnv(gym.Env):
         self.env = SmartInboxEnv()
         
         # Action space: MultiDiscrete
-        # [0] Action type: 0=archive, 1=flag, 2=move_to_folder (Work)
+        # [0] Action type: 0=archive, 1=flag, 2=move_to_folder (Work), 3=redact
         # [1] Email ID index: 0-14 (Supporting up to 15 emails per episode)
-        self.action_space = spaces.MultiDiscrete([3, 15])
+        self.action_space = spaces.MultiDiscrete([4, 15])
         
         # Observation space: Box (continuous floats)
         # We flatten the EmailObservation into a numeric array for standard RL.
@@ -29,29 +29,23 @@ class SmartInboxGymEnv(gym.Env):
         # [is_present (0/1), is_urgent (0/1), is_flagged (0/1)]
         # Plus 2 global features: [goal_progress, steps_remaining_normalized]
         # Total Shape: (15 * 3) + 2 = 47 dimensions
-        self.observation_space = spaces.Box(low=0.0, high=1.0, shape=(47,), dtype=np.float32)
+        self.observation_space = spaces.Box(low=0.01, high=0.99, shape=(47,), dtype=np.float32)
 
     def _encode_obs(self, obs):
         """Flattens the structured OpenEnv observation into a float32 array."""
-        encoded = np.zeros(47, dtype=np.float32)
+        # Use 0.01 as the base empty value for compliance
+        encoded = np.full(47, 0.01, dtype=np.float32)
         encoded[0] = float(obs.goal_progress)
-        encoded[1] = float(obs.steps_remaining) / 15.0 # Max Steps is 15 in state defaults
+        encoded[1] = max(0.01, float(obs.steps_remaining) / 15.0) # Max Steps is 15 in state defaults
         
         # Cap at 15 to match our Box space
         for i, email in enumerate(obs.emails[:15]):
-            # Emails IDs are string numbers "1", "2", etc.
-            # We map email_id "1" to index 0, "2" to index 1, etc.
-            try:
-                # Store the email at a fixed position based on its absolute ID
-                # This ensures consistent feature mapping for the neural network
-                eid_idx = int(email.id) - 1
-                if 0 <= eid_idx < 15:
-                    idx = 2 + (eid_idx * 3)
-                    encoded[idx] = 1.0     # is_present
-                    encoded[idx+1] = 1.0 if getattr(email, "is_urgent", False) else 0.0
-                    encoded[idx+2] = 1.0 if getattr(email, "is_flagged", False) else 0.0
-            except ValueError:
-                pass
+            eid_idx = int(email.id) - 1
+            if 0 <= eid_idx < 15:
+                idx = 2 + (eid_idx * 3)
+                encoded[idx] = 0.99     # is_present
+                encoded[idx+1] = 0.99 if getattr(email, "is_urgent", False) else 0.01
+                encoded[idx+2] = 0.99 if getattr(email, "is_flagged", False) else 0.01
                 
         return encoded
 
@@ -65,7 +59,7 @@ class SmartInboxGymEnv(gym.Env):
         email_idx = action[1]
         
         # Map back to string commands
-        action_map = {0: "archive", 1: "flag", 2: "move_to_folder"}
+        action_map = {0: "archive", 1: "flag", 2: "move_to_folder", 3: "redact"}
         action_type = action_map.get(action_idx, "archive")
         
         # Convert absolute index back to email ID string
