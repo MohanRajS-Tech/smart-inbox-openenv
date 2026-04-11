@@ -16,6 +16,15 @@ class SmartInboxEnv:
         self.current_gt = {}   # Ground truth, built dynamically each reset
         self.STEP_PENALTY = 0.01  # The "Cost of Time"
 
+        # Load policies for the Check Policy action
+        policy_path = os.path.join(os.path.dirname(__file__), "..", "tasks", "company_policies.json")
+        try:
+            with open(policy_path, "r") as f:
+                self.policies = json.load(f)
+        except Exception as e:
+            print(f"Warning: Could not load company_policies.json: {e}")
+            self.policies = {}
+
     def reset(self, task_id: str = "easy", seed: Optional[int] = None):
         """
         Resets the environment with a procedurally generated inbox.
@@ -103,6 +112,7 @@ class SmartInboxEnv:
                 is_urgent=(category == "urgent"),
                 has_pii=has_pii,
                 category=category,
+                policy_required=template.get("policy_required", False),
                 thread_id=template.get("thread_id")
             ))
 
@@ -112,6 +122,9 @@ class SmartInboxEnv:
             if has_pii:
                 # If it has PII, it MUST be redacted first (Gold Standard)
                 self.current_gt["redacted_ids"].append(email_id)
+            
+            if template.get("policy_required", False):
+                self._state.policy_required_ids.append(email_id)
             
             if rule == "archive":
                 self.current_gt["archived_ids"].append(email_id)
@@ -125,6 +138,20 @@ class SmartInboxEnv:
                     self.current_gt["redacted_ids"].append(email_id)
             elif rule == "report_as_phishing":
                 self.current_gt["phishing_ids"].append(email_id)
+            elif rule == "policy_dependent":
+                # Determine correct action based on specific template properties
+                if category == "finance":
+                    amount = template.get("amount", 0)
+                    if amount > 100:
+                        self.current_gt["flagged_ids"].append(email_id)
+                    else:
+                        self.current_gt["archived_ids"].append(email_id)
+                elif category == "it_request":
+                    item_type = template.get("item_type", "software")
+                    if item_type == "hardware":
+                        self.current_gt["work_folder_ids"].append(email_id)
+                    else:
+                        self.current_gt["flagged_ids"].append(email_id)
             # No rule (e.g. "spam") = intentionally ignored, not in ground truth
 
     def state(self) -> EmailState:
@@ -233,6 +260,14 @@ class SmartInboxEnv:
                 wrong_action_penalty = 0.2
                 status += " (FALSE POSITIVE: Reported non-phishing email)"
                 info["action_result"] = "fail"
+
+        elif action.action_type == "check_policy":
+            if action.email_id not in self._state.policy_checked_ids:
+                self._state.policy_checked_ids.append(action.email_id)
+            
+            policy_text = self.policies.get(target.category, "General Policy: Handle with standard care.")
+            status = f"Policy [KB]: {policy_text}"
+            info["action_result"] = "success"
 
         # Trap Logic: If interacting with phishing via non-reporting actions
         if action.action_type in ["archive", "flag", "move_to_folder"] and target.category == "phishing":

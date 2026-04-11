@@ -49,39 +49,37 @@ TASKS = {
     ]
   },
   "expert": {
-    "description": "Enterprise Triage. Flag Urgent, Move Work, Redact Security, and Report Phishing. Be extremely careful; mishandling PII or falling for phishing will fail the task.",
-    "select": {"urgent": 2, "work": 2, "security": 2, "phishing": 2},
-    "rules": {"urgent": "flag", "work": "move_to_folder|Work", "security": "redact", "phishing": "report_as_phishing"},
+    "description": "Enterprise Triage: High-stakes operations. You must redact PII, report phishing, and CONSULT COMPANY POLICY for finance and IT requests. Neglecting policy checks on sensitive emails will result in penalties.",
+    "select": {"urgent": 1, "work": 1, "security": 1, "phishing": 1, "finance": 2, "it_request": 2},
+    "rules": {"urgent": "flag", "work": "move_to_folder|Work", "security": "redact", "phishing": "report_as_phishing", "finance": "policy_dependent", "it_request": "policy_dependent"},
     "email_pool": [
-      {"sender": "Boss",         "subject": "ASAP: Review Slide Deck",         "category": "urgent"},
-      {"sender": "Alerts",       "subject": "[CRITICAL] DB Overload",          "category": "urgent"},
-      {"sender": "Project Mgr",  "subject": "Work: Sprint 5 Planning",         "category": "work"},
-      {"sender": "Dev Ops",      "subject": "Work: Review PR #123",            "category": "work"},
+      {"sender": "Finance Dept", "subject": "Refund Request (ID 442)", "snippet": "Amount: $150.00. Please process.", "category": "finance", "amount": 150, "policy_required": True},
+      {"sender": "Finance Dept", "subject": "Reimbursement (ID 121)", "snippet": "Amount: $45.00. Small mileage claim.", "category": "finance", "amount": 45, "policy_required": True},
+      {"sender": "IT Support",  "subject": "Hardware Request: New Laptop", "snippet": "Need a Macbook Pro for the new dev.", "category": "it_request", "item_type": "hardware", "policy_required": True},
+      {"sender": "IT Support",  "subject": "Software: Adobe Access", "snippet": "License request for Creative Cloud.", "category": "it_request", "item_type": "software", "policy_required": True},
       {"sender": "Security",     "subject": "Leak Detected: Internal Keys",    "category": "security", "has_pii": True},
-      {"sender": "Audit",        "subject": "Confidential: User List Export",  "category": "security", "has_pii": True},
-      {"sender": "CEO @ Company", "subject": "Quick Favor",  "snippet": "I need some gift cards for a client meeting. Reply with codes.", "category": "phishing"},
-      {"sender": "IT Security",  "subject": "Suspicious Login Attempt", "snippet": "Login from Russia detected. Click to verify: http://company-secure.net", "category": "phishing"},
-      {"sender": "Marketing",    "subject": "Lunch Menu for Today",            "category": "promo"},
-      {"sender": "News",         "subject": "Daily Tech Digest",               "category": "promo"}
+      {"sender": "CEO @ Company", "subject": "Quick Favor",  "snippet": "I need some gift cards. Reply with codes.", "category": "phishing"},
+      {"sender": "Boss",         "subject": "ASAP: Review Slide Deck",         "category": "urgent"},
+      {"sender": "Project Mgr",  "subject": "Work: Sprint 5 Planning",         "category": "work"}
     ]
   },
   "insane": {
-    "description": "Chaos Mode. Manage a high-volume inbox with constant dynamic spawns. You must redact, flag, and report phishing. Speed and safety are equally vital.",
-    "select": {"urgent": 3, "work": 3, "security": 3, "phishing": 3},
-    "rules": {"urgent": "flag", "work": "move_to_folder|Work", "security": "redact", "phishing": "report_as_phishing"},
+    "description": "Chaos Mode: Multi-channel triage. Redact, Report, and Follow Policies. Dynamic spawning will test your consistency under pressure.",
+    "select": {"urgent": 2, "work": 2, "security": 2, "phishing": 2, "finance": 2, "it_request": 2},
+    "rules": {"urgent": "flag", "work": "move_to_folder|Work", "security": "redact", "phishing": "report_as_phishing", "finance": "policy_dependent", "it_request": "policy_dependent"},
     "email_pool": [
-       {"sender": "IT Ops",       "subject": "SYSTEM DOWN", "category": "urgent"},
-       {"sender": "Client B",     "subject": "Refund Request Escalation", "category": "urgent"},
-       {"sender": "System",       "subject": "Memory usage at 99%", "category": "urgent"},
-       {"sender": "Team",         "subject": "Work: Standup meeting notes", "category": "work"},
-       {"sender": "Manager",      "subject": "Work: Performance reviews", "category": "work"},
-       {"sender": "Admin",        "subject": "Work: Budget forecast", "category": "work"},
+       {"sender": "IT Help",      "subject": "New Monitor Request", "category": "it_request", "item_type": "hardware", "policy_required": True},
+       {"sender": "IT Help",      "subject": "VPN Access - Remote Work", "category": "it_request", "item_type": "software", "policy_required": True},
+       {"sender": "Accounts",     "subject": "Invoice #992 - High Amount", "snippet": "Total: $1,200.00", "category": "finance", "amount": 1200, "policy_required": True},
+       {"sender": "Accounts",     "subject": "Office Supplies Refund", "snippet": "Total: $12.50", "category": "finance", "amount": 12.5, "policy_required": True},
        {"sender": "HR",           "subject": "Sensitive: Employee SSN list", "category": "security", "has_pii": True},
        {"sender": "Dev",          "subject": "SSH Private Key for Server-1", "category": "security", "has_pii": True},
-       {"sender": "GCP",          "subject": "Billing Alert: Over Budget", "category": "security", "has_pii": True},
-       {"sender": "Police",       "subject": "TICKET: Unpaid Fine - Final Notice", "snippet": "Pay now or warrant will be issued: http://pay-gov-fines.com", "category": "phishing"},
-       {"sender": "HR Benefits",  "subject": "New Insurance Policy - Sign Here", "snippet": "Open enrollment ends today. Login to portal: http://hr-portal-benefits.org", "category": "phishing"},
-       {"sender": "Webmaster",    "subject": "Domain Expiration Alert", "snippet": "Your domain expires in 2 hours. Renew now: http://renew-domain-fast.net", "category": "phishing"}
+       {"sender": "IT Security",  "subject": "Suspicious Login Attempt", "category": "phishing"},
+       {"sender": "Police",       "subject": "TICKET: Unpaid Fine", "category": "phishing"},
+       {"sender": "IT Ops",       "subject": "SYSTEM DOWN", "category": "urgent"},
+       {"sender": "Client B",     "subject": "Refund Request Escalation", "category": "urgent"},
+       {"sender": "Team",         "subject": "Work: Standup meeting notes", "category": "work"},
+       {"sender": "Manager",      "subject": "Work: Performance reviews", "category": "work"}
     ]
   }
 }

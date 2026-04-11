@@ -13,6 +13,7 @@ class Email(BaseModel):
     is_urgent: bool = False # Internal hidden property for the reward logic
     has_pii: bool = False # Whether the email contains sensitive data (PII)
     category: str = "other" # Internal category for rule matching
+    policy_required: bool = False # Whether this email requires a policy check
     thread_id: Optional[str] = None # For linking related emails
 
 class EmailObservation(BaseModel):
@@ -28,7 +29,7 @@ class EmailObservation(BaseModel):
 
 class EmailAction(BaseModel):
     """The move an agent can make. This is the SPEC-COMPLIANT action."""
-    action_type: str = Field(..., description="Action: 'archive', 'flag', 'move_to_folder', 'redact', 'report_as_phishing'")
+    action_type: str = Field(..., description="Action: 'archive', 'flag', 'move_to_folder', 'redact', 'report_as_phishing', 'check_policy'")
     email_id: str = Field(..., description="The ID of the target email")
     folder_name: Optional[str] = Field(None, description="Target folder name (if 'move_to_folder')")
 
@@ -43,6 +44,8 @@ class EmailState(BaseModel):
     work_folder_ids: List[str] = []
     redacted_ids: List[str] = [] # IDs of emails that have been safely redacted
     phishing_reported_ids: List[str] = [] # IDs of emails reported as phishing
+    policy_checked_ids: List[str] = [] # IDs of emails where policy was consulted
+    policy_required_ids: List[str] = [] # IDs of emails that REQUIRED a policy check
     security_breach: bool = False # Flags if PII was mishandled or social engineering clicked
     task_id: str = "easy" # 'easy', 'medium', 'hard', 'expert', 'insane'
     score: float = 0.01 # Normalized 0.01 to 0.99

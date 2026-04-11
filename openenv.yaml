@@ -22,9 +22,11 @@ action_space:
     - move_to_folder
     - redact
     - report_as_phishing
+    - check_policy
   description: >
     Email management action. NOTE: Redact is MANDATORY for emails containing PII. 
     report_as_phishing is MANDATORY for adversarial/phishing emails.
+    check_policy is REQUIRED for Finance/IT requests to determine the correct action.
 
 endpoints:
   health: /health

@@ -60,17 +60,30 @@ def grade_task(state: Any, ground_truth: Dict[str, Any]) -> float:
         if eid in redacted_ids:
             correct += 1
 
-    # 5. Evaluate Phishing Reports (Security Benchmark)
     gt_phishing = ground_truth.get("phishing_ids", [])
     total_required += len(gt_phishing)
     for eid in gt_phishing:
         if eid in phishing_reported_ids:
             correct += 1
 
+    # 6. Policy Compliance Check (Executive Reasoning)
+    # A small 'Negligence Penalty' for skipped policy checks on required emails.
+    negligence_penalty = 0.0
+    policy_required_ids = get_val(state, "policy_required_ids", [])
+    policy_checked_ids = get_val(state, "policy_checked_ids", [])
+    
+    for eid in policy_required_ids:
+        # If the email was processed (it's in any of the 'done' lists) but NOT checked in policy
+        processed = (eid in archived_ids or eid in flagged_ids or 
+                     eid in work_folder_ids or eid in redacted_ids or 
+                     eid in phishing_reported_ids)
+        if processed and eid not in policy_checked_ids:
+            negligence_penalty += 0.15 # 15% penalty per neglected professional step
+
     # Normalized Score (Avoid division by zero)
     if total_required == 0:
         return 0.99
         
-    raw_score = correct / total_required
+    raw_score = (correct / total_required) - negligence_penalty
     clamped_score = max(0.01, min(0.99, raw_score))
     return round(clamped_score, 2)

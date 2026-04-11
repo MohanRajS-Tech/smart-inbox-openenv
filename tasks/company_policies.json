@@ -1,0 +1,6 @@
+{
+  "finance": "FINANCE POLICY: All refund/payment requests ABOVE $100 must be FLAGGED for manager approval. Any amount BELOW or EQUAL to $100 should be ARCHIVED as processed.",
+  "it_request": "IT POLICY: Hardware requests (Laptops, Monitors, Phones) must be MOVED to the 'Work' folder. Software or access requests (VPN, Slack, Adobe) should be FLAGGED for the IT team.",
+  "legal": "LEGAL POLICY: Any email from 'Legal' or 'Audit' must be REDACTED and then FLAGGED for priority review.",
+  "internal": "INTERNAL POLICY: Team event RSVPs and office news should be ARCHIVED after reading. Urgent HR alerts must be FLAGGED."
+}
