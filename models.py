@@ -22,7 +22,7 @@ class EmailObservation(BaseModel):
     goal_progress: float = 0.01 # From 0.0 to 1.0 (Progress toward the task)
     score: float = 0.01 # Standard OpenEnv field for grader verification
     steps_remaining: int = 15 # Temporal pressure signal
-    reward: float = 0.0 # Points earned in the last step
+    reward: float = 0.01 # Points earned in the last step
     done: bool = False
 
 class EmailAction(BaseModel):

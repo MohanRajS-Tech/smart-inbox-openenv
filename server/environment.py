@@ -46,7 +46,7 @@ class SmartInboxEnv:
         self._state.total_emails = len(self.emails)
         self._state.score = self._calculate_score() # Ensure state score is updated
         # Return ONLY the observation (OpenEnv Spec)
-        return self._get_obs("Inbox Reset", 0.0)
+        return self._get_obs("Inbox Reset", 0.01)
 
     def _build_episode_from_pool(self, task_data: Dict[str, Any]):
         """
@@ -144,7 +144,7 @@ class SmartInboxEnv:
 
         # Determine if task is completed
         current_score = self._calculate_score()
-        done = (current_score == 1.0) or (self._state.step_count >= self._state.max_steps)
+        done = (current_score >= 0.99) or (self._state.step_count >= self._state.max_steps)
         steps_remaining = max(0, self._state.max_steps - self._state.step_count)
 
         return EmailObservation(
@@ -227,6 +227,11 @@ class SmartInboxEnv:
             
         # Reward = (Progress Gain) - (Temporal Pressure Penalty) - (Wrong Action Penalty)
         reward = round(progress_gain - self.STEP_PENALTY - wrong_action_penalty, 2)
+        # Ensure reward is never exactly 0.0 (Hard Clamping)
+        if reward >= 0:
+            reward = max(0.01, reward)
+        else:
+            reward = min(-0.01, reward)
         
         # 3. Dynamic Spawn Mechanic: Inject a new email every 3 steps (max 12 to fit in Gym)
         spawn_message = ""
