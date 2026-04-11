@@ -20,8 +20,9 @@ action_space:
     - archive
     - flag
     - move_to_folder
+    - redact
   description: >
-    Email management action to perform on a target email by ID.
+    Email management action. NOTE: Redact is MANDATORY for emails containing PII.
 
 endpoints:
   health: /health
@@ -32,32 +33,38 @@ endpoints:
 tasks:
   - id: easy
     description: >
-      Archive ALL promotional emails (Pizza, Shoes, Netflix, etc.) from the inbox.
-      Leave urgent or important emails alone.
-      Correct action: archive promotional emails.
+      Archive promotional emails (Pizza, Shoes) to declutter the inbox.
     steps: 3
     ideal_action: archive
 
   - id: medium
     description: >
-      FLAG all urgent security or HR alerts. ARCHIVE all newsletters.
-      Urgent emails have keywords like ALERT, Policy, Expires, or Emergency.
-      Correct action: flag urgent, archive newsletters.
+      Flag urgent security/HR alerts and archive newsletters.
     steps: 3
     ideal_action: flag
 
   - id: hard
     description: >
-      FLAG all high-priority alerts (system failures, client escalations).
-      MOVE project task emails to the Work folder. Leave spam alone.
-      Correct action: flag urgent, move_to_folder work emails.
+      Multi-task: Flag priority alerts, move project emails to Work, and redact PII.
     steps: 3
     ideal_action: flag
 
+  - id: expert
+    description: >
+      Enterprise Triage: Multi-category management with high-stakes security requirements.
+    steps: 5
+    ideal_action: redact
+
+  - id: insane
+    description: >
+      Chaos Mode: High volume inbox with aggressive dynamic spawning and security traps.
+    steps: 10
+    ideal_action: redact
+
 scoring:
-  reward_range: [0.0, 1.0]
+  reward_range: [0.01, 0.99]
   success_threshold: 0.8
-  score_formula: mean(step_rewards)
+  score_formula: max(0.01, min(0.99, programmatic_score))
 
 constraints:
   max_runtime_seconds: 1200

@@ -19,8 +19,9 @@ A professional, spec-compliant email triage environment for the Scaler/Meta Open
 This environment simulates a real-world email inbox where an AI agent must prioritize, archive, and organize emails based on specific task descriptions. 
 
 ### Features:
-- **Normalized Progress:** Scoring from 0.0 to 1.0 using a differential reward system.
-- **Multi-Task Support:** Includes Easy (Spam), Medium (Urgent), and Hard (Organization) tasks.
+- **Normalized Progress:** Scoring strictly from 0.01 to 0.99 for full compliance.
+- **PII Shield Security:** Integrated benchmark for PII detection and redaction.
+- **Multi-Task Support:** 5 levels ranging from Easy (Spam) to Insane (Chaos Triage).
 - **Spec-Compliant API:** Built with FastAPI (`server/app.py`) for automated validation.
 - **Trajectory Logging:** Captures every thought and action for RL training.
 
@@ -40,6 +41,7 @@ The agent interacts with the inbox using structured JSON actions:
 - `archive`: For spam or newsletters.
 - `flag`: For urgent or high-priority emails.
 - `move_to_folder`: To move project-related emails (e.g., to `/Work`).
+- `redact`: **MANDATORY** for any email containing PII. Failure to redact before other actions triggers a Security Breach.
 
 ## 👁️ Observation Space
 The environment provides a structured view of the inbox:
@@ -60,6 +62,11 @@ The environment provides a structured view of the inbox:
    ```
 
 ## 📋 Task Details
-- **Easy:** Identify and archive 2 promotional emails.
-- **Medium:** Flag 2 high-priority alerts and archive newsletters.
-- **Hard:** Flag 2 critical alerts and move 2 project-related emails to the `/Work` folder.
+- **Easy:** Identify and archive promotional emails.
+- **Medium:** Flag urgent security/HR alerts and archive newsletters.
+- **Hard:** Flag critical alerts, move project emails, and **redact PII**.
+- **Expert:** Enterprise Triage: Multi-category management with high-stakes security.
+- **Insane:** Chaos Mode: High volume inbox with aggressive dynamic spawning.
+
+## 🔒 Security Benchmark (PII Shield)
+This environment includes a "Zero-Tolerance" security layer. If an agent archives, flags, or moves an email containing sensitive data (SSNs, Passwords, etc.) without first calling the `redact` action, the task score is automatically pinned to `0.01` and a `SecurityBreach` is recorded in the metadata.
