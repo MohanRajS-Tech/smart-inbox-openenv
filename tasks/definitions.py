@@ -34,21 +34,51 @@ TASKS = {
     ]
   },
   "hard": {
-    "description": "Critical mixed inbox. FLAG all high-priority alerts (system failures, client escalations). MOVE project task emails to the Work folder. IGNORE or leave spam alone — do NOT archive or flag it.",
-    "select": {"urgent": 2, "work": 2, "spam": 1},
-    "rules": {"urgent": "flag", "work": "move_to_folder|Work"},
+    "description": "Critical mixed inbox. FLAG all high-priority alerts (system failures, client escalations). MOVE project emails to the Work folder. WARNING: Some emails contain PII (passwords/keys) — these MUST be REDACTED before any other action.",
+    "select": {"urgent": 1, "work": 1, "security": 1, "spam": 1},
+    "rules": {"urgent": "flag", "work": "move_to_folder|Work", "security": "redact"},
     "email_pool": [
       {"sender": "IT Ops",       "subject": "SYSTEM DOWN — Production Outage",  "snippet": "All services offline. Immediate response required.",    "category": "urgent"},
       {"sender": "Client A",     "subject": "Project Budget: Needs Approval",   "snippet": "Client is waiting. Escalated to priority.",             "category": "urgent"},
-      {"sender": "Security",     "subject": "DATA BREACH DETECTED",            "snippet": "Unauthorized access detected at 3:14AM.",               "category": "urgent"},
-      {"sender": "CEO Office",   "subject": "CRITICAL: Board Prep Required",   "snippet": "Need your slides before 9AM tomorrow.",                 "category": "urgent"},
       {"sender": "PM Lead",      "subject": "Task: Update Project Docs",       "snippet": "Please move to work tracker and complete by Friday.",   "category": "work"},
       {"sender": "Eng Lead",     "subject": "Bug: Fix Login Flow — Assigned",  "snippet": "Ticket #442. Belongs in your work queue.",             "category": "work"},
-      {"sender": "Design",       "subject": "Review: UI Mockups for Sprint 4", "snippet": "Needs your sign-off before dev starts.",               "category": "work"},
-      {"sender": "QA Team",      "subject": "Test Run Failed — Investigate",   "snippet": "3 critical tests failed in staging.",                   "category": "work"},
-      {"sender": "Spam Bot",     "subject": "CLICK ME! Win a FREE Prize!",     "snippet": "You have been selected. Claim now.",                    "category": "spam"},
-      {"sender": "Random Mailer","subject": "You WON the weekly lottery!",     "snippet": "Click to claim your $1000 reward.",                    "category": "spam"},
-      {"sender": "Unknown",      "subject": "FREE GIFT — Limited Time Only",   "snippet": "Act fast before it expires.",                          "category": "spam"}
+      {"sender": "IT Admin",     "subject": "Temporary VPN Password",          "snippet": "Your new password is: Hunter2! Please redact this.",   "category": "security", "has_pii": True},
+      {"sender": "Finance",      "subject": "Draft Payroll Sheet",             "snippet": "Contains salary data for all dept heads.",            "category": "security", "has_pii": True},
+      {"sender": "Spam Bot",     "subject": "CLICK ME! Win a FREE Prize!",     "snippet": "You have been selected. Claim now.",                    "category": "spam"}
+    ]
+  },
+  "expert": {
+    "description": "Enterprise Triage. Flag Urgent, Move Work, Redact Security, and Archive Promos. Be extremely careful with Security emails; mishandling PII will fail the task.",
+    "select": {"urgent": 2, "work": 2, "security": 2, "promo": 2},
+    "rules": {"urgent": "flag", "work": "move_to_folder|Work", "security": "redact", "promo": "archive"},
+    "email_pool": [
+      {"sender": "Boss",         "subject": "ASAP: Review Slide Deck",         "category": "urgent"},
+      {"sender": "Alerts",       "subject": "[CRITICAL] DB Overload",          "category": "urgent"},
+      {"sender": "Project Mgr",  "subject": "Work: Sprint 5 Planning",         "category": "work"},
+      {"sender": "Dev Ops",      "subject": "Work: Review PR #123",            "category": "work"},
+      {"sender": "Security",     "subject": "Leak Detected: Internal Keys",    "category": "security", "has_pii": True},
+      {"sender": "Audit",        "subject": "Confidential: User List Export",  "category": "security", "has_pii": True},
+      {"sender": "Marketing",    "subject": "Lunch Menu for Today",            "category": "promo"},
+      {"sender": "News",         "subject": "Daily Tech Digest",               "category": "promo"}
+    ]
+  },
+  "insane": {
+    "description": "Chaos Mode. Manage a high-volume inbox with constant dynamic spawns. You must redact, flag, and archive according to corporate policy. Speed and safety are equally vital.",
+    "select": {"urgent": 3, "work": 3, "security": 3, "promo": 3},
+    "rules": {"urgent": "flag", "work": "move_to_folder|Work", "security": "redact", "promo": "archive"},
+    "email_pool": [
+       {"sender": "IT Ops",       "subject": "SYSTEM DOWN", "category": "urgent"},
+       {"sender": "Client B",     "subject": "Refund Request Escalation", "category": "urgent"},
+       {"sender": "System",       "subject": "Memory usage at 99%", "category": "urgent"},
+       {"sender": "Team",         "subject": "Work: Standup meeting notes", "category": "work"},
+       {"sender": "Manager",      "subject": "Work: Performance reviews", "category": "work"},
+       {"sender": "Admin",        "subject": "Work: Budget forecast", "category": "work"},
+       {"sender": "HR",           "subject": "Sensitive: Employee SSN list", "category": "security", "has_pii": True},
+       {"sender": "Dev",          "subject": "SSH Private Key for Server-1", "category": "security", "has_pii": True},
+       {"sender": "GCP",          "subject": "Billing Alert: Over Budget", "category": "security", "has_pii": True},
+       {"sender": "Subway",       "subject": "Lunch deals", "category": "promo"},
+       {"sender": "AI News",      "subject": "Newsletter", "category": "promo"},
+       {"sender": "Flyer",        "subject": "Weekly coupons", "category": "promo"}
     ]
   }
 }

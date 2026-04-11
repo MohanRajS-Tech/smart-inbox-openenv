@@ -23,6 +23,13 @@ def grade_task(state: Any, ground_truth: Dict[str, Any]) -> float:
     archived_ids = get_val(state, "archived_ids", [])
     flagged_ids = get_val(state, "flagged_ids", [])
     work_folder_ids = get_val(state, "work_folder_ids", [])
+    redacted_ids = get_val(state, "redacted_ids", [])
+    security_breach = get_val(state, "security_breach", False)
+
+    # 0. CRITICAL: Security Breach Penalty
+    # If PII was mishandled, the score is fixed at the minimum possible.
+    if security_breach:
+        return 0.01
 
     # 1. Evaluate Archived Emails
     gt_archived = ground_truth.get("archived_ids", [])
@@ -43,6 +50,13 @@ def grade_task(state: Any, ground_truth: Dict[str, Any]) -> float:
     total_required += len(gt_work)
     for eid in gt_work:
         if eid in work_folder_ids:
+            correct += 1
+
+    # 4. Evaluate Redacted Emails (Security Compliance)
+    gt_redacted = ground_truth.get("redacted_ids", [])
+    total_required += len(gt_redacted)
+    for eid in gt_redacted:
+        if eid in redacted_ids:
             correct += 1
 
     # Normalized Score (Avoid division by zero)

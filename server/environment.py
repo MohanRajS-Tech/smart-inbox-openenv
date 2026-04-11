@@ -81,11 +81,17 @@ class SmartInboxEnv:
 
         # --- Step 4: Assign fresh sequential IDs + build Email models ---
         self.emails = []
-        self.current_gt = {"archived_ids": [], "flagged_ids": [], "work_folder_ids": []}
+        self.current_gt = {
+            "archived_ids": [], 
+            "flagged_ids": [], 
+            "work_folder_ids": [],
+            "redacted_ids": [] # Ground truth: emails that MUST be redacted
+        }
 
         for i, template in enumerate(sampled_emails):
             email_id = str(i + 1)
             category = template["category"]
+            has_pii = template.get("has_pii", False)
 
             self.emails.append(Email(
                 id=email_id,
@@ -93,16 +99,27 @@ class SmartInboxEnv:
                 subject=template["subject"],
                 snippet=template.get("snippet", ""),
                 is_urgent=(category == "urgent"),
+                has_pii=has_pii,
+                thread_id=template.get("thread_id")
             ))
 
             # --- Step 5: Build ground truth from rules ---
-            rule = rules.get(category)  # e.g. "archive", "flag", "move_to_folder|Work"
+            rule = rules.get(category)  # e.g. "archive", "flag", "move_to_folder|Work", "redact"
+            
+            if has_pii:
+                # If it has PII, it MUST be redacted first (Gold Standard)
+                self.current_gt["redacted_ids"].append(email_id)
+            
             if rule == "archive":
                 self.current_gt["archived_ids"].append(email_id)
             elif rule == "flag":
                 self.current_gt["flagged_ids"].append(email_id)
             elif rule and rule.startswith("move_to_folder"):
                 self.current_gt["work_folder_ids"].append(email_id)
+            elif rule == "redact":
+                # Special case where redaction IS the primary goal
+                if email_id not in self.current_gt["redacted_ids"]:
+                    self.current_gt["redacted_ids"].append(email_id)
             # No rule (e.g. "spam") = intentionally ignored, not in ground truth
 
     def state(self) -> EmailState:
@@ -115,8 +132,13 @@ class SmartInboxEnv:
 
     def _get_obs(self, status: str, reward: float):
         """Provides the current view to the agent."""
-        # Filter: Hide emails already processed (Archived, Moved to Work, or Flagged)
-        done_ids = self._state.archived_ids + self._state.work_folder_ids + self._state.flagged_ids
+        # Filter: Hide emails already processed (Archived, Moved to Work, Flagged, or Redacted)
+        done_ids = (
+            self._state.archived_ids + 
+            self._state.work_folder_ids + 
+            self._state.flagged_ids +
+            self._state.redacted_ids
+        )
         visible = [e for e in self.emails if e.id not in done_ids]
 
         # Determine if task is completed
@@ -157,21 +179,39 @@ class SmartInboxEnv:
 
         # 1. Process the Action
         if action.action_type == "archive":
+            if target.has_pii and action.email_id not in self._state.redacted_ids:
+                self._state.security_breach = True
+                status += " [SECURITY BREACH: Archived PII without redaction]"
+            
             if action.email_id not in self._state.archived_ids:
                 self._state.archived_ids.append(action.email_id)
                 info["action_result"] = "success"
 
         elif action.action_type == "flag":
+            if target.has_pii and action.email_id not in self._state.redacted_ids:
+                self._state.security_breach = True
+                status += " [SECURITY BREACH: Flagged PII without redaction]"
+
             if action.email_id not in self._state.flagged_ids:
                 self._state.flagged_ids.append(action.email_id)
                 target.is_flagged = True
                 info["action_result"] = "success"
 
         elif action.action_type == "move_to_folder":
+            if target.has_pii and action.email_id not in self._state.redacted_ids:
+                self._state.security_breach = True
+                status += " [SECURITY BREACH: Moved PII without redaction]"
+
             if action.folder_name == "Work":
                 if action.email_id not in self._state.work_folder_ids:
                     self._state.work_folder_ids.append(action.email_id)
                     info["action_result"] = "success"
+
+        elif action.action_type == "redact":
+            if action.email_id not in self._state.redacted_ids:
+                self._state.redacted_ids.append(action.email_id)
+                info["action_result"] = "success"
+                status += " (PII Safely Redacted)"
 
         # 2. Calculate Reward
         new_score_before_spawn = self._calculate_score()
@@ -209,12 +249,18 @@ class SmartInboxEnv:
                 
                 # Expand ground truth so the grader knows about this new objective
                 rule = getattr(self, '_spawn_rules', {}).get(category)
+                if has_pii:
+                    self.current_gt["redacted_ids"].append(new_id)
+
                 if rule == "archive":
                     self.current_gt["archived_ids"].append(new_id)
                 elif rule == "flag":
                     self.current_gt["flagged_ids"].append(new_id)
                 elif rule and rule.startswith("move_to_folder"):
                     self.current_gt["work_folder_ids"].append(new_id)
+                elif rule == "redact":
+                    if new_id not in self.current_gt["redacted_ids"]:
+                        self.current_gt["redacted_ids"].append(new_id)
                     
                 spawn_message = " [*NEW MAIL*]"
                 info["gt_size"] = sum(len(ids) for ids in self.current_gt.values())

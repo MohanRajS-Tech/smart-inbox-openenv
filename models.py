@@ -11,6 +11,8 @@ class Email(BaseModel):
     is_flagged: bool = False
     folder: str = "Inbox"
     is_urgent: bool = False # Internal hidden property for the reward logic
+    has_pii: bool = False # Whether the email contains sensitive data (PII)
+    thread_id: Optional[str] = None # For linking related emails
 
 class EmailObservation(BaseModel):
     """What the agent sees at each step. This is the SPEC-COMPLIANT view."""
@@ -25,7 +27,7 @@ class EmailObservation(BaseModel):
 
 class EmailAction(BaseModel):
     """The move an agent can make. This is the SPEC-COMPLIANT action."""
-    action_type: str = Field(..., description="Action: 'archive', 'flag', 'move_to_folder', 'delete'")
+    action_type: str = Field(..., description="Action: 'archive', 'flag', 'move_to_folder', 'redact'")
     email_id: str = Field(..., description="The ID of the target email")
     folder_name: Optional[str] = Field(None, description="Target folder name (if 'move_to_folder')")
 
@@ -38,7 +40,9 @@ class EmailState(BaseModel):
     archived_ids: List[str] = []
     flagged_ids: List[str] = []
     work_folder_ids: List[str] = []
-    task_id: str = "easy" # 'easy', 'medium', 'hard'
+    redacted_ids: List[str] = [] # IDs of emails that have been safely redacted
+    security_breach: bool = False # Flags if PII was mishandled
+    task_id: str = "easy" # 'easy', 'medium', 'hard', 'expert', 'insane'
     score: float = 0.0 # Normalized 0.0 to 1.0
 
 class StepResponse(BaseModel):
