@@ -15,22 +15,36 @@ env = SmartInboxEnv()
 TASKS = [
     {
         "id": "easy",
-        "description": "Archive the promotional emails (Pizza and Shoes) to declutter the inbox.",
+        "description": "Archive promotional emails (Pizza and Shoes) to declutter the inbox.",
         "difficulty": "easy",
         "grader_id": "programmatic",
         "rubric_id": "programmatic"
     },
     {
         "id": "medium",
-        "description": "Flag the urgent alerts (Security and HR) while archiving the newsletters.",
+        "description": "Flag urgent security/HR alerts and archive newsletters.",
         "difficulty": "medium",
         "grader_id": "programmatic",
         "rubric_id": "programmatic"
     },
     {
         "id": "hard",
-        "description": "Flag priority alerts AND move project emails to the 'Work' folder.",
+        "description": "Flag priority alerts, move project emails to Work, and redact PII.",
         "difficulty": "hard",
+        "grader_id": "programmatic",
+        "rubric_id": "programmatic"
+    },
+    {
+        "id": "expert",
+        "description": "Enterprise Triage: Multi-category management with high-stakes security requirements.",
+        "difficulty": "expert",
+        "grader_id": "programmatic",
+        "rubric_id": "programmatic"
+    },
+    {
+        "id": "insane",
+        "description": "Chaos Mode: High volume inbox with aggressive dynamic spawning and security traps.",
+        "difficulty": "insane",
         "grader_id": "programmatic",
         "rubric_id": "programmatic"
     }

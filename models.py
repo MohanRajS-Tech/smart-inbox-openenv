@@ -19,8 +19,8 @@ class EmailObservation(BaseModel):
     emails: List[Email]
     current_folder: str = "Inbox"
     last_action_status: Optional[str] = None
-    goal_progress: float = 0.0 # From 0.0 to 1.0 (Progress toward the task)
-    score: float = 0.0 # Standard OpenEnv field for grader verification
+    goal_progress: float = 0.01 # From 0.0 to 1.0 (Progress toward the task)
+    score: float = 0.01 # Standard OpenEnv field for grader verification
     steps_remaining: int = 15 # Temporal pressure signal
     reward: float = 0.0 # Points earned in the last step
     done: bool = False
@@ -43,7 +43,7 @@ class EmailState(BaseModel):
     redacted_ids: List[str] = [] # IDs of emails that have been safely redacted
     security_breach: bool = False # Flags if PII was mishandled
     task_id: str = "easy" # 'easy', 'medium', 'hard', 'expert', 'insane'
-    score: float = 0.0 # Normalized 0.0 to 1.0
+    score: float = 0.01 # Normalized 0.01 to 0.99
 
 class StepResponse(BaseModel):
     """Mandatory: Standard OpenEnv 1.0 step response schema."""

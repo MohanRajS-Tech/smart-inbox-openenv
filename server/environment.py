@@ -44,6 +44,7 @@ class SmartInboxEnv:
             self._build_episode_from_pool(task_data)
 
         self._state.total_emails = len(self.emails)
+        self._state.score = self._calculate_score() # Ensure state score is updated
         # Return ONLY the observation (OpenEnv Spec)
         return self._get_obs("Inbox Reset", 0.0)
 
