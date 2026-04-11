@@ -21,8 +21,10 @@ action_space:
     - flag
     - move_to_folder
     - redact
+    - report_as_phishing
   description: >
-    Email management action. NOTE: Redact is MANDATORY for emails containing PII.
+    Email management action. NOTE: Redact is MANDATORY for emails containing PII. 
+    report_as_phishing is MANDATORY for adversarial/phishing emails.
 
 endpoints:
   health: /health
@@ -45,21 +47,21 @@ tasks:
 
   - id: hard
     description: >
-      Multi-task: Flag priority alerts, move project emails to Work, and redact PII.
-    steps: 3
+      Multi-task: Flag priority alerts, move project emails, redact PII, and report phishing.
+    steps: 5
     ideal_action: flag
 
   - id: expert
     description: >
-      Enterprise Triage: Multi-category management with high-stakes security requirements.
-    steps: 5
-    ideal_action: redact
+      Enterprise Triage: High-stakes security. Redact PII and report sophisticated phishing traps.
+    steps: 8
+    ideal_action: report_as_phishing
 
   - id: insane
     description: >
       Chaos Mode: High volume inbox with aggressive dynamic spawning and security traps.
-    steps: 10
-    ideal_action: redact
+    steps: 12
+    ideal_action: report_as_phishing
 
 scoring:
   reward_range: [0.01, 0.99]

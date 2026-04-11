@@ -86,7 +86,8 @@ class SmartInboxEnv:
             "archived_ids": [], 
             "flagged_ids": [], 
             "work_folder_ids": [],
-            "redacted_ids": [] # Ground truth: emails that MUST be redacted
+            "redacted_ids": [], # Ground truth: emails that MUST be redacted
+            "phishing_ids": [] # Ground truth: emails that MUST be reported
         }
 
         for i, template in enumerate(sampled_emails):
@@ -101,6 +102,7 @@ class SmartInboxEnv:
                 snippet=template.get("snippet", ""),
                 is_urgent=(category == "urgent"),
                 has_pii=has_pii,
+                category=category,
                 thread_id=template.get("thread_id")
             ))
 
@@ -121,6 +123,8 @@ class SmartInboxEnv:
                 # Special case where redaction IS the primary goal
                 if email_id not in self.current_gt["redacted_ids"]:
                     self.current_gt["redacted_ids"].append(email_id)
+            elif rule == "report_as_phishing":
+                self.current_gt["phishing_ids"].append(email_id)
             # No rule (e.g. "spam") = intentionally ignored, not in ground truth
 
     def state(self) -> EmailState:
@@ -141,7 +145,8 @@ class SmartInboxEnv:
             self._state.archived_ids + 
             self._state.work_folder_ids + 
             self._state.flagged_ids +
-            self._state.redacted_ids
+            self._state.redacted_ids +
+            self._state.phishing_reported_ids
         )
         visible = [e for e in self.emails if e.id not in done_ids]
 
@@ -217,6 +222,23 @@ class SmartInboxEnv:
                 info["action_result"] = "success"
                 status += " (PII Safely Redacted)"
 
+        elif action.action_type == "report_as_phishing":
+            if target.category == "phishing":
+                if action.email_id not in self._state.phishing_reported_ids:
+                    self._state.phishing_reported_ids.append(action.email_id)
+                    info["action_result"] = "success"
+                    status += " (Threat Neutralized)"
+            else:
+                # Penalty for reporting a legitimate email as phishing
+                wrong_action_penalty = 0.2
+                status += " (FALSE POSITIVE: Reported non-phishing email)"
+                info["action_result"] = "fail"
+
+        # Trap Logic: If interacting with phishing via non-reporting actions
+        if action.action_type in ["archive", "flag", "move_to_folder"] and target.category == "phishing":
+            self._state.security_breach = True
+            status += f" [SECURITY BREACH: Fell for Phishing - {action.action_type.upper()}]"
+
         # 2. Calculate Reward
         new_score_before_spawn = self._calculate_score()
         progress_gain = new_score_before_spawn - old_score
@@ -271,6 +293,8 @@ class SmartInboxEnv:
                 elif rule == "redact":
                     if new_id not in self.current_gt["redacted_ids"]:
                         self.current_gt["redacted_ids"].append(new_id)
+                elif rule == "report_as_phishing":
+                    self.current_gt["phishing_ids"].append(new_id)
                     
                 spawn_message = " [*NEW MAIL*]"
                 info["gt_size"] = sum(len(ids) for ids in self.current_gt.values())

@@ -29,14 +29,14 @@ TASKS = [
     },
     {
         "id": "hard",
-        "description": "Flag priority alerts, move project emails to Work, and redact PII.",
+        "description": "Flag priority alerts, move project emails, redact PII, and report phishing.",
         "difficulty": "hard",
         "grader_id": "programmatic",
         "rubric_id": "programmatic"
     },
     {
         "id": "expert",
-        "description": "Enterprise Triage: Multi-category management with high-stakes security requirements.",
+        "description": "Enterprise Triage: High-stakes security. Redact PII and report sophisticated phishing traps.",
         "difficulty": "expert",
         "grader_id": "programmatic",
         "rubric_id": "programmatic"

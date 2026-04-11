@@ -34,9 +34,9 @@ TASKS = {
     ]
   },
   "hard": {
-    "description": "Critical mixed inbox. FLAG all high-priority alerts (system failures, client escalations). MOVE project emails to the Work folder. WARNING: Some emails contain PII (passwords/keys) — these MUST be REDACTED before any other action.",
-    "select": {"urgent": 1, "work": 1, "security": 1, "spam": 1},
-    "rules": {"urgent": "flag", "work": "move_to_folder|Work", "security": "redact"},
+    "description": "Critical mixed inbox. FLAG all high-priority alerts (system failures, client escalations). MOVE project emails to the Work folder. WARNING: Some emails contain PII (passwords/keys) — these MUST be REDACTED. Also, WATCH OUT for phishing attempts — REPORT them immediately.",
+    "select": {"urgent": 1, "work": 1, "security": 1, "phishing": 1},
+    "rules": {"urgent": "flag", "work": "move_to_folder|Work", "security": "redact", "phishing": "report_as_phishing"},
     "email_pool": [
       {"sender": "IT Ops",       "subject": "SYSTEM DOWN — Production Outage",  "snippet": "All services offline. Immediate response required.",    "category": "urgent"},
       {"sender": "Client A",     "subject": "Project Budget: Needs Approval",   "snippet": "Client is waiting. Escalated to priority.",             "category": "urgent"},
@@ -44,13 +44,14 @@ TASKS = {
       {"sender": "Eng Lead",     "subject": "Bug: Fix Login Flow — Assigned",  "snippet": "Ticket #442. Belongs in your work queue.",             "category": "work"},
       {"sender": "IT Admin",     "subject": "Temporary VPN Password",          "snippet": "Your new password is: Hunter2! Please redact this.",   "category": "security", "has_pii": True},
       {"sender": "Finance",      "subject": "Draft Payroll Sheet",             "snippet": "Contains salary data for all dept heads.",            "category": "security", "has_pii": True},
+      {"sender": "IT Helpdesk",  "subject": "URGENT: Password Reset Required", "snippet": "We detected unauthorized access. Click here to reset: http://secure-login.co/reset", "category": "phishing"},
       {"sender": "Spam Bot",     "subject": "CLICK ME! Win a FREE Prize!",     "snippet": "You have been selected. Claim now.",                    "category": "spam"}
     ]
   },
   "expert": {
-    "description": "Enterprise Triage. Flag Urgent, Move Work, Redact Security, and Archive Promos. Be extremely careful with Security emails; mishandling PII will fail the task.",
-    "select": {"urgent": 2, "work": 2, "security": 2, "promo": 2},
-    "rules": {"urgent": "flag", "work": "move_to_folder|Work", "security": "redact", "promo": "archive"},
+    "description": "Enterprise Triage. Flag Urgent, Move Work, Redact Security, and Report Phishing. Be extremely careful; mishandling PII or falling for phishing will fail the task.",
+    "select": {"urgent": 2, "work": 2, "security": 2, "phishing": 2},
+    "rules": {"urgent": "flag", "work": "move_to_folder|Work", "security": "redact", "phishing": "report_as_phishing"},
     "email_pool": [
       {"sender": "Boss",         "subject": "ASAP: Review Slide Deck",         "category": "urgent"},
       {"sender": "Alerts",       "subject": "[CRITICAL] DB Overload",          "category": "urgent"},
@@ -58,14 +59,16 @@ TASKS = {
       {"sender": "Dev Ops",      "subject": "Work: Review PR #123",            "category": "work"},
       {"sender": "Security",     "subject": "Leak Detected: Internal Keys",    "category": "security", "has_pii": True},
       {"sender": "Audit",        "subject": "Confidential: User List Export",  "category": "security", "has_pii": True},
+      {"sender": "CEO @ Company", "subject": "Quick Favor",  "snippet": "I need some gift cards for a client meeting. Reply with codes.", "category": "phishing"},
+      {"sender": "IT Security",  "subject": "Suspicious Login Attempt", "snippet": "Login from Russia detected. Click to verify: http://company-secure.net", "category": "phishing"},
       {"sender": "Marketing",    "subject": "Lunch Menu for Today",            "category": "promo"},
       {"sender": "News",         "subject": "Daily Tech Digest",               "category": "promo"}
     ]
   },
   "insane": {
-    "description": "Chaos Mode. Manage a high-volume inbox with constant dynamic spawns. You must redact, flag, and archive according to corporate policy. Speed and safety are equally vital.",
-    "select": {"urgent": 3, "work": 3, "security": 3, "promo": 3},
-    "rules": {"urgent": "flag", "work": "move_to_folder|Work", "security": "redact", "promo": "archive"},
+    "description": "Chaos Mode. Manage a high-volume inbox with constant dynamic spawns. You must redact, flag, and report phishing. Speed and safety are equally vital.",
+    "select": {"urgent": 3, "work": 3, "security": 3, "phishing": 3},
+    "rules": {"urgent": "flag", "work": "move_to_folder|Work", "security": "redact", "phishing": "report_as_phishing"},
     "email_pool": [
        {"sender": "IT Ops",       "subject": "SYSTEM DOWN", "category": "urgent"},
        {"sender": "Client B",     "subject": "Refund Request Escalation", "category": "urgent"},
@@ -76,9 +79,9 @@ TASKS = {
        {"sender": "HR",           "subject": "Sensitive: Employee SSN list", "category": "security", "has_pii": True},
        {"sender": "Dev",          "subject": "SSH Private Key for Server-1", "category": "security", "has_pii": True},
        {"sender": "GCP",          "subject": "Billing Alert: Over Budget", "category": "security", "has_pii": True},
-       {"sender": "Subway",       "subject": "Lunch deals", "category": "promo"},
-       {"sender": "AI News",      "subject": "Newsletter", "category": "promo"},
-       {"sender": "Flyer",        "subject": "Weekly coupons", "category": "promo"}
+       {"sender": "Police",       "subject": "TICKET: Unpaid Fine - Final Notice", "snippet": "Pay now or warrant will be issued: http://pay-gov-fines.com", "category": "phishing"},
+       {"sender": "HR Benefits",  "subject": "New Insurance Policy - Sign Here", "snippet": "Open enrollment ends today. Login to portal: http://hr-portal-benefits.org", "category": "phishing"},
+       {"sender": "Webmaster",    "subject": "Domain Expiration Alert", "snippet": "Your domain expires in 2 hours. Renew now: http://renew-domain-fast.net", "category": "phishing"}
     ]
   }
 }
