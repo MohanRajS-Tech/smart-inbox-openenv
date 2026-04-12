@@ -49,8 +49,8 @@ TASKS = {
     ]
   },
   "expert": {
-    "description": "Enterprise Triage: Operational Efficiency. You must redact PII, report phishing, and use TOOLS (Calendar/CRM) to resolve requests. Tasks include checking client tiers in CRM and booking meeting rooms.",
-    "select": {"urgent": 1, "work": 1, "security": 1, "phishing": 1, "finance": 1, "client_query": 1, "meeting_request": 1, "administrative": 1},
+    "description": "Enterprise Triage: Operational Efficiency. You must redact PII, report phishing, and use TOOLS (Calendar/CRM/Identity) to resolve requests. High-stakes requests MUST be verified.",
+    "select": {"urgent": 1, "work": 1, "security": 1, "phishing": 1, "finance": 1, "client_query": 1, "meeting_request": 1, "account_link": 1},
     "rules": {
         "urgent": "flag", 
         "work": "move_to_folder|Work", 
@@ -59,22 +59,23 @@ TASKS = {
         "finance": "policy_dependent",
         "client_query": "search_crm",
         "meeting_request": "update_calendar",
-        "administrative": "create_task"
+        "account_link": "verify_identity"
     },
     "email_pool": [
+      {"sender": "CEO", "sender_email": "ceo@company.com", "subject": "URGENT: Account Link Needed", "snippet": "Need you to link my accounts for the board meeting.", "category": "account_link"},
       {"sender": "Salesforce Lead", "subject": "New Inquiry: Acme Corp", "snippet": "Need to check client tier before responding.", "category": "client_query"},
       {"sender": "Project Mgr",  "subject": "Schedule Sync: 3 PM", "snippet": "Book a room for 3 PM today.", "category": "meeting_request", "time": "3:00 PM"},
       {"sender": "Office Manager", "subject": "Supplies low", "snippet": "Create a task to order coffee beans.", "category": "administrative"},
       {"sender": "CEO @ Company", "subject": "Quick Favor",  "snippet": "I need some gift cards. Reply with codes.", "category": "phishing"},
       {"sender": "Boss",         "subject": "ASAP: Review Slide Deck",         "category": "urgent"},
-      {"sender": "Staff Eng",    "subject": "Internal Key Leak", "category": "security", "has_pii": True},
       {"sender": "Finance Team", "subject": "Quarterly Report Draft", "snippet": "Draft of the Q3 results.", "category": "finance", "amount": 500, "policy_required": True},
-      {"sender": "Engineering",  "subject": "Work: Feature Specs", "snippet": "Move to work folder.", "category": "work"}
+      {"sender": "Engineering",  "subject": "Work: Feature Specs", "snippet": "Move to work folder.", "category": "work"},
+      {"sender": "Staff Eng",    "subject": "Internal Key Leak", "category": "security", "has_pii": True}
     ]
   },
   "insane": {
-    "description": "Chaos Mode: Multi-channel operations. Redact, Report, and solve Operational Conflicts. Includes heavy tool usage and scheduling challenges.",
-    "select": {"urgent": 1, "work": 1, "security": 1, "phishing": 1, "finance": 1, "client_query": 2, "meeting_request": 2, "administrative": 1},
+    "description": "Chaos Mode: Multi-channel operations. Redact, Report, and solve Operational Conflicts. Includes heavy tool usage and social engineering traps.",
+    "select": {"urgent": 1, "work": 1, "security": 1, "phishing": 1, "finance": 1, "client_query": 1, "meeting_request": 1, "spoofed_internal": 1, "knowledge_request": 1},
     "rules": {
       "urgent": "flag", 
       "work": "move_to_folder|Work", 
@@ -83,9 +84,12 @@ TASKS = {
       "finance": "policy_dependent",
       "client_query": "search_crm",
       "meeting_request": "update_calendar",
-      "administrative": "create_task"
+      "spoofed_internal": "verify_identity",
+      "knowledge_request": "verify_identity"
     },
     "email_pool": [
+       {"sender": "CEO", "sender_email": "ceo@company-corp.com", "subject": "Wire Transfer Needed", "snippet": "Need to send funds to vendor immediately.", "category": "spoofed_internal"}, # Spoof
+       {"sender": "HR Manager", "sender_email": "hr@company.com", "subject": "Benefits Update", "snippet": "Details on the new health plan.", "category": "knowledge_request"}, # Legit
        {"sender": "VP Sales", "subject": "Client Check: Globex", "snippet": "What is the status of Globex?", "category": "client_query"},
        {"sender": "Marketing", "subject": "Brand Review: Acme Corp", "snippet": "Verify tier for Acme Corp.", "category": "client_query"},
        {"sender": "Director", "subject": "Morning Sync: 10 AM", "snippet": "Schedule a sync for 10 AM.", "category": "meeting_request", "time": "10:00 AM"}, # Conflict

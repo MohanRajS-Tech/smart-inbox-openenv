@@ -5,6 +5,7 @@ class Email(BaseModel):
     """Represents a single email in the inbox."""
     id: str
     sender: str
+    sender_email: str = "" # [NEW] Real address for spoofing detection
     subject: str
     snippet: str = ""
     is_read: bool = False
@@ -31,7 +32,7 @@ class EmailObservation(BaseModel):
 
 class EmailAction(BaseModel):
     """The move an agent can make. This is the SPEC-COMPLIANT action."""
-    action_type: str = Field(..., description="Action: 'archive', 'flag', 'move_to_folder', 'redact', 'report_as_phishing', 'check_policy', 'search_memory', 'update_calendar', 'search_crm', 'create_task'")
+    action_type: str = Field(..., description="Action: 'archive', 'flag', 'move_to_folder', 'redact', 'report_as_phishing', 'check_policy', 'search_memory', 'update_calendar', 'search_crm', 'create_task', 'verify_identity'")
     email_id: str = Field(..., description="The ID of the target email")
     query: Optional[str] = Field(None, description="Search term (for 'search_memory' or 'search_crm')")
     folder_name: Optional[str] = Field(None, description="Target folder name (if 'move_to_folder')")
@@ -64,6 +65,10 @@ class EmailState(BaseModel):
     crm_searched_ids: List[str] = []
     calendar_updated_ids: List[str] = []
     task_created_ids: List[str] = []
+    
+    # [SECURITY ARCHITECT STATE]
+    employee_directory: Dict[str, str] = {} # { "Name": "email@company.com" }
+    verified_ids: List[str] = [] # IDs that have passed identity check
 
 class StepResponse(BaseModel):
     """Mandatory: Standard OpenEnv 1.0 step response schema."""
