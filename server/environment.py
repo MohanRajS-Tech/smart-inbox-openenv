@@ -34,6 +34,17 @@ class SmartInboxEnv:
             print(f"Warning: Could not load user_context.json: {e}")
             self.user_context_data = {"summary": "Standard Profile", "history": []}
 
+        # [NEW] Static Mock Tools Infrastructure
+        self.MOCK_CRM = {
+            "Acme Corp": {"id": "C-001", "tier": "Gold", "contact": "Alice", "notes": "Active Project"},
+            "Globex": {"id": "C-002", "tier": "Silver", "contact": "Hank", "notes": "Pending Quote"},
+            "Hooli": {"id": "C-003", "tier": "Bronze", "contact": "Gavin", "notes": "Idle"}
+        }
+        self.INITIAL_CALENDAR = [
+            {"event": "Team Sync", "time": "10:00 AM"},
+            {"event": "Partner Review", "time": "02:00 PM"}
+        ]
+
     def reset(self, task_id: str = "easy", seed: Optional[int] = None):
         """
         Resets the environment with a procedurally generated inbox.
@@ -60,6 +71,11 @@ class SmartInboxEnv:
             self.current_gt = {}
         else:
             self._build_episode_from_pool(task_data)
+
+        # [NEW] Initialize tool states in the model
+        self._state.calendar_entries = list(self.INITIAL_CALENDAR)
+        self._state.crm_records = dict(self.MOCK_CRM)
+        self._state.operations_log = []
 
         self._state.total_emails = len(self.emails)
         self._state.score = self._calculate_score() # Ensure state score is updated
@@ -105,7 +121,10 @@ class SmartInboxEnv:
             "flagged_ids": [], 
             "work_folder_ids": [],
             "redacted_ids": [], # Ground truth: emails that MUST be redacted
-            "phishing_ids": [] # Ground truth: emails that MUST be reported
+            "phishing_ids": [], # Ground truth: emails that MUST be reported
+            "crm_search_ids": [], # New tool-use GT
+            "calendar_update_ids": [],
+            "task_creation_ids": []
         }
 
         for i, template in enumerate(sampled_emails):
@@ -164,6 +183,12 @@ class SmartInboxEnv:
                         self.current_gt["work_folder_ids"].append(email_id)
                     else:
                         self.current_gt["flagged_ids"].append(email_id)
+            elif rule == "search_crm":
+                self.current_gt["crm_search_ids"].append(email_id)
+            elif rule == "update_calendar":
+                self.current_gt["calendar_update_ids"].append(email_id)
+            elif rule == "create_task":
+                self.current_gt["task_creation_ids"].append(email_id)
             # No rule (e.g. "spam") = intentionally ignored, not in ground truth
 
     def state(self) -> EmailState:
@@ -197,6 +222,7 @@ class SmartInboxEnv:
         return EmailObservation(
             emails=visible,
             last_action_status=status,
+            tool_output=self._state.operations_log[-1] if self._state.operations_log else None,
             goal_progress=current_score,
             score=current_score, # Alias for validator compliance
             user_context=self.user_context_data.get("summary", ""),
@@ -297,6 +323,50 @@ class SmartInboxEnv:
             else:
                 status = f"Memory: No results for '{query}'"
                 info["action_result"] = "fail"
+
+        elif action.action_type == "update_calendar":
+            details = action.calendar_details or {}
+            event_name = details.get("event", "Untitled Event")
+            event_time = details.get("time", "TBD")
+            
+            # Conflict Detection
+            conflict = next((e for e in self._state.calendar_entries if e["time"] == event_time), None)
+            if conflict:
+                status = f"CALENDAR CONFLICT: {event_time} is occupied by '{conflict['event']}'"
+                info["action_result"] = "fail"
+                self._state.operations_log.append(status)
+            else:
+                new_entry = {"event": event_name, "time": event_time}
+                self._state.calendar_entries.append(new_entry)
+                if action.email_id not in self._state.calendar_updated_ids:
+                    self._state.calendar_updated_ids.append(action.email_id)
+                status = f"CALENDAR SUCCESS: Booked '{event_name}' at {event_time}"
+                info["action_result"] = "success"
+                self._state.operations_log.append(status)
+
+        elif action.action_type == "search_crm":
+            query = action.query or ""
+            # Simple substring match on keys
+            results = {k: v for k, v in self._state.crm_records.items() if query.lower() in k.lower()}
+            if results:
+                if action.email_id not in self._state.crm_searched_ids:
+                    self._state.crm_searched_ids.append(action.email_id)
+                status = f"CRM RESULTS: Found {len(results)} matches for '{query}'"
+                info["action_result"] = "success"
+                # Store serialized results in operations log for agent observation
+                self._state.operations_log.append(json.dumps(results))
+            else:
+                status = f"CRM: No matches found for '{query}'"
+                info["action_result"] = "fail"
+                self._state.operations_log.append(status)
+
+        elif action.action_type == "create_task":
+            if action.email_id not in self._state.task_created_ids:
+                self._state.task_created_ids.append(action.email_id)
+            task_desc = action.task_details or "New Task"
+            status = f"TASK CREATED: {task_desc}"
+            info["action_result"] = "success"
+            self._state.operations_log.append(status)
 
         # Trap Logic: If interacting with phishing via non-reporting actions
         if action.action_type in ["archive", "flag", "move_to_folder"] and target.category == "phishing":

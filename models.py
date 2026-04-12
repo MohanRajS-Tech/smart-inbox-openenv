@@ -24,16 +24,19 @@ class EmailObservation(BaseModel):
     goal_progress: float = 0.01 # From 0.0 to 1.0 (Progress toward the task)
     score: float = 0.01 # Standard OpenEnv field for grader verification
     user_context: str = "" # [NEW] Situational Awareness (e.g. OOO status)
+    tool_output: Optional[str] = None # Output from the last tool call (e.g. CRM search results)
     steps_remaining: int = 15 # Temporal pressure signal
     reward: float = 0.01 # Points earned in the last step
     done: bool = False
 
 class EmailAction(BaseModel):
     """The move an agent can make. This is the SPEC-COMPLIANT action."""
-    action_type: str = Field(..., description="Action: 'archive', 'flag', 'move_to_folder', 'redact', 'report_as_phishing', 'check_policy', 'search_memory'")
+    action_type: str = Field(..., description="Action: 'archive', 'flag', 'move_to_folder', 'redact', 'report_as_phishing', 'check_policy', 'search_memory', 'update_calendar', 'search_crm', 'create_task'")
     email_id: str = Field(..., description="The ID of the target email")
-    query: Optional[str] = Field(None, description="Search term (if 'search_memory')")
+    query: Optional[str] = Field(None, description="Search term (for 'search_memory' or 'search_crm')")
     folder_name: Optional[str] = Field(None, description="Target folder name (if 'move_to_folder')")
+    calendar_details: Optional[Dict[str, str]] = Field(None, description="Details like {'event': 'Meeting', 'time': '2 PM'} (for 'update_calendar')")
+    task_details: Optional[str] = Field(None, description="Task description (for 'create_task')")
 
 class EmailState(BaseModel):
     """The full internal state of the environment."""
@@ -53,6 +56,14 @@ class EmailState(BaseModel):
     security_breach: bool = False # Flags if PII was mishandled or social engineering clicked
     task_id: str = "easy" # 'easy', 'medium', 'hard', 'expert', 'insane'
     score: float = 0.01 # Normalized 0.01 to 0.99
+    
+    # [TOOL STATE]
+    calendar_entries: List[Dict[str, str]] = [] # [{ "event": "...", "time": "..." }]
+    crm_records: Dict[str, Dict[str, Any]] = {} # Mock DB of client info
+    operations_log: List[str] = [] # Audit log of tool uses for grading
+    crm_searched_ids: List[str] = []
+    calendar_updated_ids: List[str] = []
+    task_created_ids: List[str] = []
 
 class StepResponse(BaseModel):
     """Mandatory: Standard OpenEnv 1.0 step response schema."""

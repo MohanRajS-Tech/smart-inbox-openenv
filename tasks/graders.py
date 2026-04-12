@@ -66,6 +66,36 @@ def grade_task(state: Any, ground_truth: Dict[str, Any]) -> float:
         if eid in phishing_reported_ids:
             correct += 1
 
+    # 5. Evaluate Tool Use (Operational Executive)
+    crm_searched_ids = get_val(state, "crm_searched_ids", [])
+    calendar_updated_ids = get_val(state, "calendar_updated_ids", [])
+    task_created_ids = get_val(state, "task_created_ids", [])
+
+    # 5a. CRM Search
+    gt_crm = ground_truth.get("crm_search_ids", [])
+    total_required += len(gt_crm)
+    for eid in gt_crm:
+        if eid in crm_searched_ids:
+            correct += 1
+
+    # 5b. Calendar Update
+    gt_calendar = ground_truth.get("calendar_update_ids", [])
+    total_required += len(gt_calendar)
+    for eid in gt_calendar:
+        if eid in calendar_updated_ids:
+            # Note: Success is handled in the env (conflict detection), 
+            # so being in this list means the booking was SUCCESSFUL.
+            correct += 1
+
+    # 5c. Task Creation
+    gt_tasks = ground_truth.get("task_creation_ids", [])
+    total_required += len(gt_tasks)
+    for eid in gt_tasks:
+        if eid in task_created_ids:
+            correct += 1
+
+    # 6. Policy Compliance Check (Executive Reasoning)
+
     # 6. Policy Compliance Check (Executive Reasoning)
     # A small 'Negligence Penalty' for skipped policy checks on required emails.
     negligence_penalty = 0.0
