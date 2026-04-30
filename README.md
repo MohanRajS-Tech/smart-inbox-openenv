@@ -1,13 +1,13 @@
 ---
 title: "Smart Inbox Pro: The Security Architect Benchmark"
 emoji: "🛡️"
-colorFrom: "slate"
+colorFrom: "gray"
 colorTo: "blue"
 sdk: "docker"
 app_port: 8000
 pinned: true
 license: "mit"
-short_description: "A high-stakes RL environment for email triage and security reasoning."
+short_description: "High-stakes RL benchmark for email triage and security."
 tags:
   - openenv
   - reinforcement-learning
