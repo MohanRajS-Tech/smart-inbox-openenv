@@ -1,76 +1,31 @@
-name: smart_inbox_lite
-description: >
-  An OpenEnv-compliant environment for professional email triage.
-  An LLM agent receives inbox observations containing emails with
-  sender, subject, and snippet details, and must decide to
-  archive, flag, or move each email to the correct folder.
-version: "1.0.0"
-author: "Hackathon Participant"
-
-observation_space:
-  type: text
-  description: >
-    A list of emails currently visible in the inbox, including sender,
-    subject, snippet, and flag status. Also includes goal_progress (0.0-1.0),
-    steps_remaining, and last_action_status.
-
-action_space:
-  type: discrete
-  actions:
-    - archive
-    - flag
-    - move_to_folder
-    - redact
-    - report_as_phishing
-    - check_policy
-    - search_memory
-  description: >
-    Email management action. NOTE: Redact is MANDATORY for emails containing PII. 
-    report_as_phishing is MANDATORY for adversarial/phishing emails.
-    check_policy is REQUIRED for Finance/IT requests to determine the correct action.
-    search_memory is REQUIRED for resolving historical conflicts or preference matches.
-
-endpoints:
-  health: /health
-  reset:  /reset
-  step:   /step
-  state:  /state
+name: smart_inbox_pro
+version: "2.0.0"
+description: "A professional, rigorous RL benchmark for email triage, security reasoning, and enterprise tool usage. Features generative scenarios, adversarial traps, and a dense multi-criteria reward system."
+tags: [openenv, email, triage, security, ai-safety, real-world]
+seed_support: true
 
 tasks:
-  - id: easy
-    description: >
-      Archive promotional emails (Pizza, Shoes) to declutter the inbox.
-    steps: 3
-    ideal_action: archive
+  - name: easy-triage
+    description: "Archive promotional content and maintain inbox hygiene (5 emails)."
+    difficulty: easy
+  - name: medium-triage
+    description: "Manage enterprise coordination, redact sensitive PII, and handle urgent alerts (10 emails)."
+    difficulty: medium
+  - name: hard-triage
+    description: "Security Architect Challenge: Detect sophisticated phishing, verify spoofed internal requests, and ensure data compliance (15 emails)."
+    difficulty: hard
 
-  - id: medium
-    description: >
-      Flag urgent security/HR alerts and archive newsletters.
-    steps: 3
-    ideal_action: flag
-
-  - id: hard
-    description: >
-      Multi-task: Flag priority alerts, move project emails, redact PII, and report phishing.
-    steps: 5
-    ideal_action: flag
-
-  - id: expert
-    description: >
-      Enterprise Triage: High-stakes security. Redact PII and report sophisticated phishing traps.
-    steps: 8
-    ideal_action: report_as_phishing
-
-  - id: insane
-    description: >
-      Chaos Mode: High volume inbox with aggressive dynamic spawning and security traps.
-    steps: 12
-    ideal_action: report_as_phishing
+api:
+  reset: POST /reset
+  step: POST /step
+  state: GET /state
+  health: GET /health
 
 scoring:
-  reward_range: [0.01, 0.99]
-  success_threshold: 0.8
-  score_formula: max(0.01, min(0.99, programmatic_score))
+  reward_range: [-1.0, 1.0]
+  success_threshold: 0.85
+  partial_credit: true
+  security_rigor: high
 
 constraints:
   max_runtime_seconds: 1200

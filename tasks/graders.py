@@ -1,18 +1,42 @@
 from typing import Dict, List, Any
-# Note: In a real OpenEnv V4 environment, the judge might not have access to your local models.py
-# If the judge fails to import EmailState, we use a dictionary-based approach.
+from models import EmailState
+
+def clip_score(score: float) -> float:
+    """Clips the score to be strictly between 0.01 and 0.99."""
+    return round(max(0.01, min(0.99, score)), 4)
+
+def grade_step(action_result: str, info: Dict[str, Any]) -> float:
+    """
+    Computes a reward for a single step based on the outcome.
+    Providing a dense reward signal helps RL agents learn faster.
+    """
+    reward = 0.0
+    
+    if action_result == "success":
+        reward += 0.20 # Base success
+        
+        # Bonus for security compliance
+        if info.get("redacted"):
+            reward += 0.05
+        if info.get("verified"):
+            reward += 0.05
+            
+    elif action_result == "fail":
+        reward -= 0.15 # Broad failure penalty
+        
+        if info.get("security_breach"):
+            reward -= 0.50 # Heavy security penalty
+            
+    elif action_result == "no_change":
+        reward -= 0.05 # Penalty for ineffective actions (prevent loops)
+
+    return reward
 
 def grade_task(state: Any, ground_truth: Dict[str, Any]) -> float:
-    """Standardized grading function for OpenEnv V4.
-    
-    Args:
-        state: The current state object (or dictionary) of the environment.
-        ground_truth: The task's ground truth dictionary.
     """
-    correct = 0
-    total_required = 0
-
-    # Ensure state is handled whether it's an object or a dict
+    Calculates the cumulative task progress (0.01 - 0.99).
+    This is used for the 'goal_progress' metric.
+    """
     def get_val(obj, attr, default):
         if hasattr(obj, attr):
             return getattr(obj, attr)
@@ -20,132 +44,65 @@ def grade_task(state: Any, ground_truth: Dict[str, Any]) -> float:
             return obj.get(attr, default)
         return default
 
-    archived_ids = get_val(state, "archived_ids", [])
-    flagged_ids = get_val(state, "flagged_ids", [])
-    work_folder_ids = get_val(state, "work_folder_ids", [])
-    redacted_ids = get_val(state, "redacted_ids", [])
-    phishing_reported_ids = get_val(state, "phishing_reported_ids", [])
-    security_breach = get_val(state, "security_breach", False)
-
-    # 0. CRITICAL: Security Breach Penalty
-    # If PII was mishandled or phishing trap triggered, the score is fixed at the minimum possible.
-    if security_breach:
-        return 0.01
-
-    # 1. Evaluate Archived Emails
-    gt_archived = ground_truth.get("archived_ids", [])
-    total_required += len(gt_archived)
-    for eid in gt_archived:
-        if eid in archived_ids:
-            correct += 1
-
-    # 2. Evaluate Flagged Emails
-    gt_flagged = ground_truth.get("flagged_ids", [])
-    total_required += len(gt_flagged)
-    for eid in gt_flagged:
-        if eid in flagged_ids:
-            correct += 1
-
-    # 3. Evaluate Folders (e.g., Work)
-    gt_work = ground_truth.get("work_folder_ids", [])
-    total_required += len(gt_work)
-    for eid in gt_work:
-        if eid in work_folder_ids:
-            correct += 1
-
-    # 4. Evaluate Redacted Emails (Security Compliance)
-    gt_redacted = ground_truth.get("redacted_ids", [])
-    total_required += len(gt_redacted)
-    for eid in gt_redacted:
-        if eid in redacted_ids:
-            correct += 1
-
-    gt_phishing = ground_truth.get("phishing_ids", [])
-    total_required += len(gt_phishing)
-    for eid in gt_phishing:
-        if eid in phishing_reported_ids:
-            correct += 1
-
-    # 5. Evaluate Tool Use (Operational Executive)
-    crm_searched_ids = get_val(state, "crm_searched_ids", [])
-    calendar_updated_ids = get_val(state, "calendar_updated_ids", [])
-    task_created_ids = get_val(state, "task_created_ids", [])
-
-    # 5a. CRM Search
-    gt_crm = ground_truth.get("crm_search_ids", [])
-    total_required += len(gt_crm)
-    for eid in gt_crm:
-        if eid in crm_searched_ids:
-            correct += 1
-
-    # 5b. Calendar Update
-    gt_calendar = ground_truth.get("calendar_update_ids", [])
-    total_required += len(gt_calendar)
-    for eid in gt_calendar:
-        if eid in calendar_updated_ids:
-            # Note: Success is handled in the env (conflict detection), 
-            # so being in this list means the booking was SUCCESSFUL.
-            correct += 1
-
-    # 5c. Task Creation
-    gt_tasks = ground_truth.get("task_creation_ids", [])
-    total_required += len(gt_tasks)
-    for eid in gt_tasks:
-        if eid in task_created_ids:
-            correct += 1
-
-    # 5d. Identity Verification
-    verified_ids = get_val(state, "verified_ids", [])
-    gt_verify = ground_truth.get("verification_ids", [])
-    total_required += len(gt_verify)
-    for eid in gt_verify:
-        if eid in verified_ids:
-            correct += 1
-
-    # 6. Policy Compliance & Security Rigor (Executive Reasoning)
-    # Negligence Penalty for skipped verification or policy checks
-    negligence_penalty = 0.0
+    correct = 0
+    total_required = sum(len(ids) for ids in ground_truth.values())
     
-    # 6a. Policy Negligence
-    policy_required_ids = get_val(state, "policy_required_ids", [])
-    policy_checked_ids = get_val(state, "policy_checked_ids", [])
-    
-    for eid in policy_required_ids:
-        # If the email was processed (it's in any of the 'done' lists) but NOT checked in policy
-        processed = (eid in archived_ids or eid in flagged_ids or 
-                     eid in work_folder_ids or eid in redacted_ids or 
-                     eid in phishing_reported_ids)
-        if processed and eid not in policy_checked_ids:
-            negligence_penalty += 0.15 # 15% penalty per neglected professional step
-
-    # 7. Contextual Awareness Check (Personal Assistant)
-    # Penalty for skipping memory searches on history-dependent emails.
-    memory_required_ids = get_val(state, "memory_required_ids", [])
-    memory_searched_ids = get_val(state, "memory_searched_ids", [])
-    
-    for eid in memory_required_ids:
-        processed = (eid in archived_ids or eid in flagged_ids or 
-                     eid in work_folder_ids or eid in redacted_ids or 
-                     eid in phishing_reported_ids)
-        if processed and eid not in memory_searched_ids:
-            negligence_penalty += 0.15 # 15% penalty for ignoring user history
-
-    # 6b. Verification Negligence
-    # If a verification-required email was acted upon (archived/flagged/moved)
-    # but NOT verified, apply penalty.
-    processed_ids = archived_ids + flagged_ids + work_folder_ids
-    for eid in gt_verify:
-        if eid in processed_ids and eid not in verified_ids:
-            negligence_penalty += 0.2 # Harsh penalty for social engineering risk
-    
-    # Calculate Final Score
     if total_required == 0:
-        raw_score = 0.99
-    else:
-        raw_score = (correct / total_required) - negligence_penalty
+        return 0.99
 
-    # Hard security breach check (Immediate failure)
+    # Score based on standard categories
+    check_lists = [
+        ("archived_ids", "archived_ids"),
+        ("flagged_ids", "flagged_ids"),
+        ("work_folder_ids", "work_folder_ids"),
+        ("redacted_ids", "redacted_ids"),
+        ("phishing_ids", "phishing_reported_ids")
+    ]
+    
+    for gt_key, state_key in check_lists:
+        gt_list = ground_truth.get(gt_key, [])
+        state_list = get_val(state, state_key, [])
+        for eid in gt_list:
+            if eid in state_list:
+                correct += 1
+                
+    # Tool usage GT
+    tool_checks = [
+        ("crm_search_ids", "crm_searched_ids"),
+        ("calendar_update_ids", "calendar_updated_ids"),
+        ("verification_ids", "verified_ids")
+    ]
+    for gt_key, state_key in tool_checks:
+        gt_list = ground_truth.get(gt_key, [])
+        state_list = get_val(state, state_key, [])
+        for eid in gt_list:
+            if eid in state_list:
+                correct += 1
+
+    progress = correct / total_required
+    
+    # Critical Security Failures override progress
     if get_val(state, "security_breach", False):
         return 0.01
 
-    return round(max(0.01, min(0.99, raw_score)), 2)
+    return clip_score(progress)
+
+def compute_step_reward(old_score: float, new_score: float, info: Dict[str, Any]) -> float:
+    """
+    Calculates the reward for the transition between two states.
+    Uses progress gain + outcome-based logic.
+    """
+    progress_gain = new_score - old_score
+    
+    # Base reward is the progress boost
+    reward = progress_gain
+    
+    # Add nuance from the action result
+    if info.get("action_result") == "fail":
+        reward -= 0.1
+    
+    # Specific security penalties
+    if info.get("security_breach"):
+        reward -= 0.5
+        
+    return round(reward, 3)
